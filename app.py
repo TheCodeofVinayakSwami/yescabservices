@@ -419,5 +419,14 @@ def payment_page():
         return render_template("payment.html", error="Server error"), 500
 
 
+@app.route("/_ping")
+def ping():
+    """Lightweight health endpoint for uptime probes."""
+    return "OK", 200
+
+
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # Use port from environment for compatibility with hosts like Render
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("FLASK_DEBUG", "0") in ("1", "true", "True")
+    app.run(debug=debug, host="0.0.0.0", port=port)
