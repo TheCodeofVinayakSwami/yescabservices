@@ -1,12 +1,15 @@
 import os
 from datetime import datetime
-from flask import Flask, render_template, request, url_for, redirect, g
+from flask import Flask, render_template, request, url_for, redirect, g, jsonify
 import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
 import razorpay
 import hmac
 import hashlib
+import base64
+import json
+import logging
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))  # optional .env
@@ -48,6 +51,26 @@ def init_db():
       created_at TIMESTAMPTZ DEFAULT now()
     );
     """)
+    conn.commit()
+    # Ensure additional columns exist for payment tracking
+    cur.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS external_id TEXT;")
+    cur.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_status TEXT;")
+    cur.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_id TEXT;")
+    cur.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS webhook_payload JSONB;")
+
+    # Table to store raw incoming payment webhooks for debugging/processing
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS payment_webhooks (
+        id SERIAL PRIMARY KEY,
+        provider TEXT,
+        external_id TEXT,
+        payload JSONB,
+        headers JSONB,
+        processed BOOLEAN DEFAULT FALSE,
+        received_at TIMESTAMPTZ DEFAULT now()
+    );
+    """)
+
     conn.commit()
     cur.close()
     conn.close()
@@ -191,9 +214,16 @@ def admin():
     return render_template("admin.html", bookings=bookings)
 
 
+# Razorpay keys
 RZP_KEY_ID = os.environ.get("RZP_KEY_ID")
 RZP_KEY_SECRET = os.environ.get("RZP_KEY_SECRET")
 rzp_client = razorpay.Client(auth=(RZP_KEY_ID, RZP_KEY_SECRET)) if RZP_KEY_ID and RZP_KEY_SECRET else None
+# Merchant UPI ID (VPA) - set via environment variable, e.g. MERCHANT_UPI=merchant@bank
+MERCHANT_UPI = os.environ.get("MERCHANT_UPI")
+logging.basicConfig(level=logging.INFO)
+
+
+
 
 
 @app.route("/api/create_order", methods=["POST"])
@@ -231,6 +261,9 @@ def create_order():
         return jsonify({"error": str(e)}), 500
 
 
+
+
+
 @app.route("/api/verify_payment", methods=["POST"])
 def verify_payment_and_save():
     """
@@ -266,15 +299,15 @@ def verify_payment_and_save():
     if not hmac.compare_digest(generated_signature, signature):
         return jsonify({"error":"signature mismatch"}), 400
 
-    # Payment verified -> save booking into DB
+    # Payment verified -> save booking into DB (record payment id/status)
     try:
         conn = get_db_conn()
         cur = conn.cursor()
         cur.execute(
             """
             INSERT INTO bookings
-              (service_type, from_city, from_point, to_city, to_point, journey_date, journey_time, pickup_time, seats, amount, user_name, user_phone, user_email, created_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+              (service_type, from_city, from_point, to_city, to_point, journey_date, journey_time, pickup_time, seats, amount, user_name, user_phone, user_email, external_id, payment_status, payment_id, webhook_payload, created_at)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
             """,
             (
@@ -291,6 +324,10 @@ def verify_payment_and_save():
                 booking.get("user_name"),
                 booking.get("user_phone"),
                 booking.get("user_email"),
+                order_id,
+                'paid',
+                payment_id,
+                json.dumps(data),
                 datetime.utcnow(),
             ),
         )
@@ -299,12 +336,87 @@ def verify_payment_and_save():
         cur.close()
         return jsonify({"status":"ok","id": row["id"], "payment_id": payment_id}), 201
     except Exception as e:
+        logging.exception('Failed to save booking after payment')
         return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/config")
 def get_config():
-    return jsonify({"rzp_key_id": RZP_KEY_ID or ""})
+    return jsonify({
+        "rzp_key_id": RZP_KEY_ID or "",
+        "merchant_upi": MERCHANT_UPI or ""
+    })
+
+
+@app.route("/api/save_failed", methods=["POST"])
+def api_save_failed():
+    """
+    Save a booking marked as failed (Razorpay checkout dismissed or payment failed).
+    Expects JSON: { booking: {...}, reason: "dismissed" | "failed", failure: {...} }
+    """
+    data = request.get_json(force=True) or {}
+    booking = data.get("booking") or {}
+    failure = data.get("failure") or data.get("reason") or None
+    payment_resp = data.get("payment_response") or None
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO bookings
+              (service_type, from_city, from_point, to_city, to_point, journey_date, journey_time, pickup_time, seats, amount, user_name, user_phone, user_email, payment_status, created_at, webhook_payload)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id
+            """,
+            (
+                booking.get("service_type") or booking.get("service"),
+                booking.get("from"),
+                booking.get("from_point"),
+                booking.get("to"),
+                booking.get("to_point"),
+                booking.get("date") or None,
+                booking.get("time"),
+                booking.get("pickup_time") or None,
+                int(booking.get("seats") or 0),
+                float(booking.get("amount") or 0),
+                booking.get("user_name"),
+                booking.get("user_phone"),
+                booking.get("user_email"),
+                "failed",
+                datetime.utcnow(),
+                json.dumps({"failure": failure, "payment_response": payment_resp}),
+            ),
+        )
+        row = cur.fetchone()
+        conn.commit()
+        cur.close()
+        bid = row[0] if row and not isinstance(row, dict) else (row["id"] if row and isinstance(row, dict) and "id" in row else None)
+        return jsonify({"status":"ok","id": bid}), 201
+    except Exception as e:
+        logging.exception("Failed to persist failed booking")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/payment")
+def payment_page():
+    """
+    Render payment page showing ticket details. Expects query param `booking_id`.
+    """
+    booking_id = request.args.get("booking_id")
+    if not booking_id:
+        return render_template("payment.html", error="Missing booking_id")
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM bookings WHERE id = %s", (int(booking_id),))
+        row = cur.fetchone()
+        cur.close()
+        if not row:
+            return render_template("payment.html", error="Booking not found")
+        return render_template("payment.html", booking=row)
+    except Exception:
+        logging.exception("Failed to load booking for payment page")
+        return render_template("payment.html", error="Server error"), 500
 
 
 if __name__ == "__main__":

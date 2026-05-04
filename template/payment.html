@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width,initial-scale=1"/>
+	<title>Payment Receipt - Yes Cab</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+	<style>
+		.ticket { max-width:900px;margin:24px auto;padding:18px;background:#fff;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.06); }
+		.ticket h2{margin-top:0}
+		.row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
+		.col{flex:1 1 240px}
+		.label{font-weight:600;color:#333}
+		.value{color:#111}
+		.error{max-width:900px;margin:24px auto;padding:12px;background:#ffecec;border-radius:6px;color:#a00}
+		
+		@media print {
+			.no-print{ display:none !important }
+			.ticket { box-shadow: none; }
+			body { margin: 0; }
+		}
+	</style>
+</head>
+<body>
+	<header style="text-align:center;padding:18px 0">
+		<img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="Yes Cab Logo" style="height:56px">
+		<div style="font-weight:700;margin-top:8px">YES CAB SERVICES</div>
+	</header>
+
+	<main>
+		{% if error %}
+			<div class="error">{{ error }}</div>
+		{% else %}
+			<div class="ticket">
+				<h2>Booking Confirmation</h2>
+				<div class="row"><div class="col"><span class="label">Booking ID</span><div class="value">{{ booking.id }}</div></div>
+				<div class="col"><span class="label">Payment ID</span><div class="value">{{ booking.payment_id or '' }}</div></div></div>
+
+				<div class="row"><div class="col"><span class="label">Service</span><div class="value">{{ booking.service_type or booking.service }}</div></div>
+				<div class="col"><span class="label">Amount Paid</span><div class="value">₹{{ booking.amount }}</div></div></div>
+
+				<div class="row"><div class="col"><span class="label">From</span><div class="value">{{ booking.from_city }} {% if booking.from_point %}- {{ booking.from_point }}{% endif %}</div></div>
+				<div class="col"><span class="label">To</span><div class="value">{{ booking.to_city }} {% if booking.to_point %}- {{ booking.to_point }}{% endif %}</div></div></div>
+
+				<div class="row"><div class="col"><span class="label">Journey Date</span><div class="value">{{ booking.journey_date }}</div></div>
+				<div class="col"><span class="label">Journey Time</span><div class="value">{{ booking.journey_time }}</div></div></div>
+
+				<div class="row"><div class="col"><span class="label">Seats</span><div class="value">{{ booking.seats }}</div></div>
+				<div class="col"><span class="label">Pickup Time</span><div class="value">{{ booking.pickup_time }}</div></div></div>
+
+				<hr>
+				<h3>Passenger</h3>
+				<div class="row"><div class="col"><span class="label">Name</span><div class="value">{{ booking.user_name }}</div></div>
+				<div class="col"><span class="label">Phone</span><div class="value">{{ booking.user_phone }}</div></div></div>
+				<div class="row"><div class="col"><span class="label">Email</span><div class="value">{{ booking.user_email }}</div></div></div>
+
+				<div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end" class="no-print">
+					<button id="downloadPdf" class="btn">Download Ticket (Print/PDF)</button>
+					<button id="downloadHtml" class="btn">Download HTML</button>
+					<a href="/" class="btn">Home</a>
+				</div>
+			</div>
+		{% endif %}
+	</main>
+  
+	<script>
+		(function(){
+			const dlPdf = document.getElementById('downloadPdf');
+			if (dlPdf) dlPdf.addEventListener('click', function(){ window.print(); });
+
+			const dlHtml = document.getElementById('downloadHtml');
+			if (dlHtml) dlHtml.addEventListener('click', function(){
+				const ticketEl = document.querySelector('.ticket');
+				if (!ticketEl) return alert('Ticket not available');
+				const ticketHtml = ticketEl.outerHTML;
+				const cssHref = "{{ url_for('static', filename='css/style.css') }}";
+				const full = '<!doctype html><html><head><meta charset="utf-8"><title>Ticket - Yes Cab</title>' +
+										 '<link rel="stylesheet" href="' + cssHref + '">' +
+										 '<style>body{background:#fff;padding:20px}</style></head><body>' + ticketHtml + '</body></html>';
+				const blob = new Blob([full], {type: 'text/html'});
+				const a = document.createElement('a');
+				a.href = URL.createObjectURL(blob);
+				a.download = 'ticket-{{ booking.id }}.html';
+				document.body.appendChild(a);
+				a.click();
+				a.remove();
+			});
+		})();
+	</script>
+</body>
+</html>

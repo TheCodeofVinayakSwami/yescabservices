@@ -133,8 +133,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ===== AIRPORT - PRICING =====
   const airportPricing = {
-    "Kolhapur-Pune": { "Ertiga": 5000, "Innova": 7000, "Swift": 3800 },
-    "Kolhapur-Mumbai": { "Ertiga": 8500, "Innova": 11000, "Swift": 6000 },
+    "Kolhapur-Pune": { "Ertiga": 4500, "Innova": 7000, "Swift": 3500 },
+    "Kolhapur-Mumbai": { "Ertiga": 8500, "Innova": 11000, "Swift": 7000 },
     "Pune-Kolhapur": { "Ertiga": 5000, "Innova": 7000, "Swift": 3800 },
     "Mumbai-Kolhapur": { "Ertiga": 8500, "Innova": 11000, "Swift": 6000 },
     "Kolhapur-Belgav": { "Ertiga": 4500, "Innova": 5500, "Swift": 3500 },

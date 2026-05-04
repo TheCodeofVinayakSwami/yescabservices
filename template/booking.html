@@ -118,11 +118,30 @@
       <input id="userPhone" type="tel" class="form-control" required>
       <label>Email</label>
       <input id="userEmail" type="email" class="form-control">
-      <div style="margin-top:12px">
-        <button id="confirmBooking" type="button" class="btn">Continue to Booking</button>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
+        <button id="confirmBooking" type="button" class="btn">Pay with Razorpay</button>
+        <button id="confirmUPI" type="button" class="btn" style="background:#0b8457">Pay with UPI</button>
+        <span style="margin-left:12px;color:#666;font-size:0.9rem">Powered by Razorpay</span>
       </div>
     </form>
   </main>
+
+  <!-- UPI modal -->
+  <div id="upiModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:#fff;padding:18px;border-radius:8px;max-width:420px;width:90%;margin:0 auto;box-shadow:0 8px 30px rgba(0,0,0,.25)">
+      <h3 style="margin-top:0">Pay with UPI</h3>
+      <p style="margin:6px 0 12px;color:#444">Select your UPI app to complete the payment.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between">
+        <button class="upi-app btn" data-app="phonepe">PhonePe</button>
+        <button class="upi-app btn" data-app="gpay">Google Pay</button>
+        <button class="upi-app btn" data-app="paytm">Paytm</button>
+        <button class="upi-app btn" data-app="any">Any UPI app</button>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button id="upiCancel" class="btn">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -199,8 +218,16 @@
   <script>
   document.addEventListener('DOMContentLoaded', function(){
     const params = new URLSearchParams(window.location.search);
-
     // collect booking summary + user fields when Confirm pressed
+    async function getAmountFromParamsOrSummary() {
+      let amount = params.get('amount');
+      if (!amount) {
+        const sEl = document.getElementById('s_amount');
+        if (sEl) amount = sEl.textContent.replace(/[^0-9.]/g, '');
+      }
+      return amount;
+    }
+
     document.getElementById('confirmBooking').addEventListener('click', async function(){
       const booking = {
         service_type: params.get('service') || 'daily',
@@ -213,7 +240,7 @@
         time: params.get('time') || '',
         pickup_time: params.get('pickup_time') || '',
         seats: params.get('seats') || '',
-        amount: params.get('amount') || '',            // rupees as string
+        amount: await getAmountFromParamsOrSummary() || '',
         user_name: document.getElementById('userName').value.trim(),
         user_phone: document.getElementById('userPhone').value.trim(),
         user_email: document.getElementById('userEmail').value.trim()
@@ -222,73 +249,103 @@
       if (!booking.user_name || !booking.user_phone) { alert('Enter name and phone'); return; }
       if (!booking.amount) { alert('Amount missing'); return; }
 
-      // 1) create razorpay order on server
-      const createRes = await fetch('/api/create_order', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ amount: booking.amount, currency: 'INR', booking })
-      });
-      if (!createRes.ok) {
-        const j = await createRes.json().catch(()=>({error:createRes.status}));
-        return alert('Order creation failed: ' + (j.error || createRes.status));
-      }
-      const { order } = await createRes.json();
+      try {
+        // Create Razorpay order on server
+        const res = await fetch('/api/create_order', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify(booking)
+        });
+        if (!res.ok) {
+          const er = await res.json().catch(()=>({error: res.status}));
+          alert('Failed to create order: ' + (er.error || res.status));
+          return;
+        }
+        const payload = await res.json();
+        const order = payload.order;
 
-      // 2) open Razorpay Checkout
-      const options = {
-        key: "{{ RZP_KEY_ID if False else '' }}", // replace with RZP_KEY_ID via template OR fetch from server if needed
-        amount: order.amount, // in paise
-        currency: order.currency,
-        name: 'Yes Cab',
-        description: booking.service_type + ' booking',
-        order_id: order.id,
-        handler: async function (response) {
-          // response contains razorpay_payment_id, razorpay_order_id, razorpay_signature
-          const verifyRes = await fetch('/api/verify_payment', {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json' },
-            body: JSON.stringify({
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_signature: response.razorpay_signature,
-              booking: booking
-            })
-          });
-          if (!verifyRes.ok) {
-            const j = await verifyRes.json().catch(()=>({error:verifyRes.status}));
-            alert('Payment verification failed: ' + (j.error || verifyRes.status));
-            return;
+        // fetch public key id
+        const cfg = await fetch('/api/config').then(r=>r.json()).catch(()=>({}));
+        const key = cfg.rzp_key_id || '';
+
+        const options = {
+          key: key,
+          amount: order.amount,
+          currency: order.currency || 'INR',
+          name: 'Yes Cab',
+          description: booking.service || 'Cab booking',
+          order_id: order.id,
+          prefill: {
+            name: booking.user_name,
+            email: booking.user_email,
+            contact: booking.user_phone
+          },
+          handler: async function (response) {
+            try {
+              const vr = await fetch('/api/verify_payment', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+                  booking: booking
+                })
+              });
+              const jr = await vr.json();
+              if (!vr.ok) {
+                alert('Payment verification failed: ' + (jr.error || 'unknown'));
+                await fetch('/api/save_failed', {
+                  method: 'POST',
+                  headers: {'Content-Type':'application/json'},
+                  body: JSON.stringify({booking: booking, reason: 'verification_failed', failure: jr})
+                }).catch(()=>{});
+                window.location.href = '/booking' + window.location.search;
+                return;
+              }
+              // success: redirect to payment page to show ticket
+              const booking_id = jr.id || jr['id'];
+              window.location.href = '/payment?booking_id=' + encodeURIComponent(booking_id) + '&payment_id=' + encodeURIComponent(response.razorpay_payment_id);
+            } catch (e) {
+              alert('Error saving payment: ' + (e && e.message ? e.message : e));
+              await fetch('/api/save_failed', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({booking: booking, reason: 'save_error', failure: (e && e.message ? e.message : String(e))})
+              }).catch(()=>{});
+              window.location.href = '/booking' + window.location.search;
+            }
+          },
+          modal: {
+            ondismiss: async function() {
+              await fetch('/api/save_failed', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({booking: booking, reason: 'dismissed'})
+              }).catch(()=>{});
+              window.location.href = '/booking' + window.location.search;
+            }
           }
-          const jr = await verifyRes.json();
-          alert('Payment successful. Booking saved. ID: ' + jr.id);
-          window.location.href = '/admin';
-        },
-        prefill: {
-          name: booking.user_name,
-          email: booking.user_email,
-          contact: booking.user_phone
-        },
-        theme: { color: "#1916b6" }
-      };
+        };
 
-      // IMPORTANT: provide key_id to client. Option A: render key into template from server.
-      // If using Jinja: replace options.key value with "{{ RZP_KEY_ID }}".
-      // Here we'll fetch key id from server to avoid exposing via JS hardcode:
-      // But simplest: server-side render booking.html with RZP_KEY_ID and use it in template.
-      // For now assume server renders RZP_KEY_ID into page variable rzpKey:
-      if (typeof options.key === 'string' && !options.key) {
-        // fetch key from server endpoint (create an endpoint /config to return key id)
-        try {
-          const kres = await fetch('/api/config');
-          if (kres.ok) {
-            const jk = await kres.json();
-            options.key = jk.rzp_key_id;
-          }
-        } catch (e) { /* ignore */ }
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', async function (response) {
+          try {
+            await fetch('/api/save_failed', {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({booking: booking, failure: response.error, payment_response: response})
+            });
+          } catch (e) { console.error('failed to save failed payment', e); }
+          alert('Payment failed: ' + (response.error && response.error.description ? response.error.description : 'Payment failed'));
+          window.location.href = '/booking' + window.location.search;
+        });
+
+        rzp.open();
+
+      } catch (e) {
+        alert('Unable to start payment: ' + (e && e.message ? e.message : e));
       }
-
-      const rzp = new Razorpay(options);
-      rzp.open();
     });
   });
   </script>
