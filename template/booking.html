@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Booking - Yes Cab</title>
+  <title>Booking - Yes Cab Service</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
     /* small inline styles for summary box */
@@ -18,7 +18,7 @@
   <header>
     <img src="static/img/logo.jpg" alt="Yes Cab Logo">
     <div style="font-weight:700;font-size:1.2rem;line-height:1.1;text-align:center">
-      𝐘𝐄𝐒 𝐂𝐀𝐁 𝐒𝐄𝐑𝐕𝐈𝐂𝐄𝐒
+      Yes Cab Service
     </div>
   </header>
 
@@ -137,6 +137,16 @@
         <button class="upi-app btn" data-app="paytm">Paytm</button>
         <button class="upi-app btn" data-app="any">Any UPI app</button>
       </div>
+
+      <div id="upiFallback" style="margin-top:12px;display:none">
+        <p style="margin:6px 0 8px;color:#444;font-size:0.95rem">If the UPI app doesn't open, copy this UPI link and open it on your phone:</p>
+        <input id="upiLink" readonly style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #ddd;border-radius:6px" />
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button id="copyUpi" class="btn">Copy UPI</button>
+          <button id="upiCloseFallback" class="btn">Close</button>
+        </div>
+      </div>
+
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
         <button id="upiCancel" class="btn">Cancel</button>
       </div>
@@ -272,7 +282,7 @@
           key: key,
           amount: order.amount,
           currency: order.currency || 'INR',
-          name: 'Yes Cab',
+          name: 'Yes Cab Service',
           description: booking.service || 'Cab booking',
           order_id: order.id,
           prefill: {
@@ -351,6 +361,107 @@
   </script>
 
   <!-- keep other scripts / footer -->
+  <script>
+  document.addEventListener('DOMContentLoaded', function(){
+    const upiModal = document.getElementById('upiModal');
+    const upiCancel = document.getElementById('upiCancel');
+    const upiButtons = document.querySelectorAll('.upi-app');
+    const upiFallback = document.getElementById('upiFallback');
+    const upiLink = document.getElementById('upiLink');
+    const copyUpi = document.getElementById('copyUpi');
+    const upiCloseFallback = document.getElementById('upiCloseFallback');
+
+    function closeUpiModal(){ if (upiModal) { upiModal.style.display = 'none'; } if (upiFallback) upiFallback.style.display = 'none'; }
+
+    upiCancel?.addEventListener('click', function(){ closeUpiModal(); });
+
+    document.getElementById('confirmUPI')?.addEventListener('click', async function(){
+      const params = new URLSearchParams(window.location.search);
+      let amount = params.get('amount');
+      if (!amount) {
+        const sEl = document.getElementById('s_amount');
+        if (sEl) amount = sEl.textContent.replace(/[^0-9.]/g, '');
+      }
+
+      const booking = {
+        service_type: params.get('service') || 'daily',
+        service: params.get('service') || 'daily',
+        from: params.get('from') || params.get('pickupCity') || '',
+        from_point: params.get('from_point') || '',
+        to: params.get('to') || params.get('dropCity') || '',
+        to_point: params.get('to_point') || '',
+        date: params.get('date') || '',
+        time: params.get('time') || '',
+        pickup_time: params.get('pickup_time') || '',
+        seats: params.get('seats') || '',
+        amount: amount || '',
+        user_name: document.getElementById('userName').value.trim(),
+        user_phone: document.getElementById('userPhone').value.trim(),
+        user_email: document.getElementById('userEmail').value.trim()
+      };
+
+      if (!booking.user_name || !booking.user_phone) { alert('Enter name and phone'); return; }
+      if (!booking.amount) { alert('Amount missing'); return; }
+
+      // Try to fetch merchant UPI and auto-open if available; also populate fallback
+      try {
+        const cfg = await fetch('/api/config').then(r=>r.json()).catch(()=>({}));
+        const pa = cfg.merchant_upi || '';
+        const pn = 'Yes Cab Service';
+        const tn = booking.service || 'Cab booking';
+        const am = String(booking.amount).replace(/[^0-9.]/g, '');
+        const upiUrl = pa ? ('upi://pay?pa=' + encodeURIComponent(pa) + '&pn=' + encodeURIComponent(pn) + '&am=' + encodeURIComponent(am) + '&cu=INR' + '&tn=' + encodeURIComponent(tn)) : '';
+
+        upiModal.dataset.booking = JSON.stringify(booking);
+        if (upiUrl) {
+          upiModal.dataset.upiurl = upiUrl;
+          // Attempt to open directly (mobile will hand off to installed UPI app)
+          try { window.location.href = upiUrl; } catch (e) { console.log('UPI open error', e); }
+          // populate fallback UI
+          if (upiLink) upiLink.value = upiUrl;
+          if (upiFallback) upiFallback.style.display = 'block';
+        }
+        upiModal.style.display = 'flex';
+      } catch (e) {
+        console.error('Error preparing UPI', e);
+        alert('Unable to start UPI flow');
+      }
+    });
+
+    upiButtons.forEach(btn => {
+      btn.addEventListener('click', async function(){
+        const b = JSON.parse(upiModal.dataset.booking || '{}');
+        if (!b || !b.amount) { alert('Booking data missing'); return; }
+
+        // Prefer prebuilt upiurl in dataset, otherwise fetch config
+        let upiUrl = upiModal.dataset.upiurl || '';
+        if (!upiUrl) {
+          const cfg = await fetch('/api/config').then(r=>r.json()).catch(()=>({}));
+          const pa = cfg.merchant_upi || '';
+          if (!pa) { alert('Merchant UPI not configured'); closeUpiModal(); return; }
+          const pn = 'Yes Cab Service';
+          const tn = b.service || 'Cab booking';
+          upiUrl = 'upi://pay?pa=' + encodeURIComponent(pa) + '&pn=' + encodeURIComponent(pn) + '&am=' + encodeURIComponent(String(b.amount)) + '&cu=INR' + '&tn=' + encodeURIComponent(tn);
+        }
+
+        // Open UPI link (mobile will hand off to installed UPI app)
+        window.location.href = upiUrl;
+        closeUpiModal();
+      });
+    });
+
+    copyUpi?.addEventListener('click', function(){
+      const upi = upiModal.dataset.upiurl || (upiLink ? upiLink.value : '');
+      if (!upi) { alert('No UPI link available'); return; }
+      navigator.clipboard?.writeText(upi).then(()=>{ alert('Copied UPI link to clipboard'); }).catch(()=>{ alert('Copy failed; select and copy the link manually'); });
+    });
+
+    upiCloseFallback?.addEventListener('click', function(){ if (upiFallback) upiFallback.style.display = 'none'; });
+
+    // close modal when clicking on overlay
+    upiModal?.addEventListener('click', function(e){ if (e.target === this) closeUpiModal(); });
+  });
+  </script>
 </body>
 </html>
 

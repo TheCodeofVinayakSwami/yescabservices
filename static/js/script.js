@@ -166,10 +166,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ===== ONE WAY - PRICING =====
   const onewayPricing = {
-    "Kolhapur-Pune": { "Ertiga": 4500, "Innova": 7000, "Swift": 3600 },
+    "Kolhapur-Pune": { "Ertiga": 4500, "Innova": 7000, "Swift": 3500 },
     "Kolhapur-Mumbai & Thane": { "Ertiga": 9000, "Innova": 11000, "Swift": 7500 },
-    "Kolhapur-Belgav": { "Ertiga": 3000, "Innova": 4500, "Swift": 2500 },
-    "Kolhapur-Goa": { "Ertiga": 7000, "Innova": 4500, "Swift": 5500 },
+    "Kolhapur-Belgav": { "Ertiga": 4300, "Innova": 4500, "Swift": 3200 },
+    "Kolhapur-Goa": { "Ertiga": 4500, "Innova": 7000, "Swift": 3500 },
     "Kolhapur-Bengaluru": { "Ertiga": 12500, "Innova": 14000, "Swift": 10500 }
 
   };
