@@ -79,8 +79,8 @@ Click **Create Web Service** → Render will build & deploy automatically.
 
 **After ~2 min**, you'll see:
 - ✅ Deployment successful
-- 📍 **Backend URL** (e.g., `https://yescab-backend.onrender.com`)
-- Copy this URL for the next step
+- 📍 **Backend URL** (e.g., `https://yescabservices.onrender.com`)
+   - Copy this URL for the next step
 
 ---
 
@@ -111,7 +111,7 @@ Click **Create Static Site** → Render will deploy instantly.
 ### 3d. Update Admin Redirect
 1. Open `admin_site/index.html` locally
 2. Replace `BACKEND_URL` with your backend URL (from Step 2d)
-   - Example: replace `BACKEND_URL` with `https://yescab-backend.onrender.com`
+   - Example: replace `BACKEND_URL` with `https://yescabservices.onrender.com`
 3. Save and push to GitHub:
 ```bash
 git add admin_site/index.html
@@ -126,12 +126,12 @@ git push
 ## Step 4: Test Both URLs
 
 ### Main Project
-Visit: **`https://yescab-backend.onrender.com`**
+Visit: **`https://yescabservices.onrender.com`**
 - Expected: Homepage with booking forms
 
 ### Admin Page
 Visit: **`https://yescab-admin.onrender.com`**
-- Expected: Redirects to `https://yescab-backend.onrender.com/admin`
+- Expected: Redirects to `https://yescabservices.onrender.com/admin`
 - Shows: Admin panel with all bookings from the database
 
 ---
@@ -203,10 +203,10 @@ If you have a custom domain (e.g., `yescab.com`):
 
 | What | URL | Type |
 |------|-----|------|
-| Main site | `https://yescab-backend.onrender.com` | Flask Web Service |
-| Bookings API | `https://yescab-backend.onrender.com/api/bookings` | Flask endpoint |
+| Main site | `https://yescabservices.onrender.com` | Flask Web Service |
+| Bookings API | `https://yescabservices.onrender.com/api/bookings` | Flask endpoint |
 | Admin (static) | `https://yescab-admin.onrender.com` | Render Static Site (redirects) |
-| Admin (via backend) | `https://yescab-backend.onrender.com/admin` | Flask route |
+| Admin (via backend) | `https://yescabservices.onrender.com/admin` | Flask route |
 
 ---
 
