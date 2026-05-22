@@ -138,3 +138,25 @@
 .chat-float svg{width:28px;height:28px;display:block}
 .chat-float:hover{transform:translateY(-4px);box-shadow:0 12px 26px rgba(0,0,0,0.18)}
 @media(max-width:480px){.chat-float{right:12px;bottom:12px;width:50px;height:50px}}
+
+/* Car catalog styles */
+.car-catalog{max-width:1200px;margin:2.5rem auto;padding:0 1rem}
+.catalog-header{text-align:center;margin-bottom:1.25rem}
+.catalog-header h2{font-size:2rem;color:var(--primary);margin:0 0 6px}
+.catalog-header p{margin:0;color:var(--muted)}
+
+.cars-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.4rem}
+.car-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(13,38,59,0.06);transition:transform .18s,box-shadow .18s;display:flex;flex-direction:column;overflow:hidden}
+.car-card:hover{transform:translateY(-8px);box-shadow:0 18px 40px rgba(13,38,59,0.12)}
+
+.car-title{margin:0 0 6px;font-size:1.25rem;color:#0d2a66;font-weight:700}
+.car-info{margin:0 0 12px;color:var(--muted);font-size:0.95rem}
+
+.car-images{display:flex;gap:8px;margin-bottom:12px}
+.car-images img{width:33.333%;height:140px;object-fit:cover;border-radius:8px;border:1px solid #f0f0f0;transition:transform .16s ease}
+.car-images img:hover{transform:scale(1.03)}
+
+.btn-book{display:inline-block;align-self:flex-start;background:linear-gradient(90deg,var(--primary),#2b4bf7);color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:700;box-shadow:0 8px 18px rgba(77,74,222,0.2);transition:transform .12s ease}
+.btn-book:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(77,74,222,0.22)}
+
+@media(max-width:900px){.cars-grid{grid-template-columns:1fr}.car-images img{height:120px}}

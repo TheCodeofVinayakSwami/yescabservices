@@ -8,7 +8,7 @@
 </head>
 <body>
   <header>
-    <img src="static/img/logo.jpg" alt="Yes Cab Logo">
+    <img src="static/img/logo.png" alt="Yes Cab Logo">
     <div style="font-weight:700;font-size:1.2rem;line-height:1.1;text-align:center">
       𝐘𝐄𝐒 𝐂𝐀𝐁 𝐒𝐄𝐑𝐕𝐈𝐂𝐄𝐒
     </div>
@@ -24,10 +24,65 @@
   </nav>
 
   <main>
-    <div class="policy-section">
-      <h2>Our Car Fleet</h2>
-      <p>(Car details to be added)</p>
-    </div>
+    <section class="car-catalog">
+      <div class="catalog-header">
+        <h2>Our Car Fleet</h2>
+        <p>Choose from our popular cars — tap "Book Now" to start a WhatsApp chat.</p>
+      </div>
+
+      <div class="cars-grid">
+        <article class="car-card">
+          <div class="car-card-top">
+            <h3 class="car-title">Eritga</h3>
+            <p class="car-info">7 seats • AC/Non AC • Comfortable • Safe</p>
+          </div>
+          <div class="car-images">
+            <img src="https://via.placeholder.com/600x360?text=Eritga+1" alt="Eritga 1">
+            <img src="https://via.placeholder.com/600x360?text=Eritga+2" alt="Eritga 2">
+            <img src="https://via.placeholder.com/600x360?text=Eritga+3" alt="Eritga 3">
+          </div>
+          <a class="btn-book" href="https://wa.me/919956530909?text=Hi%2C%20I%20want%20to%20book%20the%20Honda%20City" target="_blank" rel="noopener">Book Now</a>
+        </article>
+
+        <article class="car-card">
+          <div class="car-card-top">
+            <h3 class="car-title">Maruti Swift Dzire</h3>
+            <p class="car-info">4 seats • AC/Non AC • Economy • Good for city rides</p>
+          </div>
+          <div class="car-images">
+            <img src="https://via.placeholder.com/600x360?text=Dzire+1" alt="Dzire 1">
+            <img src="https://via.placeholder.com/600x360?text=Dzire+2" alt="Dzire 2">
+            <img src="https://via.placeholder.com/600x360?text=Dzire+3" alt="Dzire 3">
+          </div>
+          <a class="btn-book" href="https://wa.me/919956530909?text=Hi%2C%20I%20want%20to%20book%20the%20Maruti%20Dzire" target="_blank" rel="noopener">Book Now</a>
+        </article>
+
+        <article class="car-card">
+          <div class="car-card-top">
+            <h3 class="car-title">Kia Carens</h3>
+            <p class="car-info">7 seats • AC • Premium SUV • Comfortable long drives</p>
+          </div>
+          <div class="car-images">
+            <img src="https://via.placeholder.com/600x360?text=Carens+1" alt="Carens 1">
+            <img src="https://via.placeholder.com/600x360?text=Carens+2" alt="Carens 2">
+            <img src="https://via.placeholder.com/600x360?text=Carens+3" alt="Carens 3">
+          </div>
+          <a class="btn-book" href="https://wa.me/919956530909?text=Hi%2C%20I%20want%20to%20book%20the%20Mahindra%20XUV700" target="_blank" rel="noopener">Book Now</a>
+        </article>
+          <article class="car-card">
+          <div class="car-card-top">
+            <h3 class="car-title">Toyota Innova Crysta</h3>
+            <p class="car-info">7 seats • AC • Spacious luggage • Driver included</p>
+          </div>
+          <div class="car-images">
+            <img src="https://via.placeholder.com/600x360?text=Innova+1" alt="Innova 1">
+            <img src="https://via.placeholder.com/600x360?text=Innova+2" alt="Innova 2">
+            <img src="https://via.placeholder.com/600x360?text=Innova+3" alt="Innova 3">
+          </div>
+          <a class="btn-book" href="https://wa.me/919956530909?text=Hi%2C%20I%20want%20to%20book%20the%20Toyota%20Innova%20Crysta" target="_blank" rel="noopener">Book Now</a>
+        </article>
+      </div>
+    </section>
   </main>
 
   <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>

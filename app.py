@@ -18,6 +18,44 @@ DATABASE_URL = os.environ.get("DATABASE_URL")  # Neon URI
 
 app = Flask(__name__, template_folder="template", static_folder="static")
 
+# Canonical city mapping and helper to normalize user-entered city names
+_CITY_CANON = {
+    "nashik": "Nashik",
+    "ahmednagar": "Ahmednagar",
+    "ahmed nagar": "Ahmednagar",
+    "ahmad nagr": "Ahmednagar",
+    "chhatrapati sambhaji nagar aurangabad": "Chhatrapati Sambhaji Nagar (Aurangabad)",
+    "chh shambaji nagar aurangabad": "Chhatrapati Sambhaji Nagar (Aurangabad)",
+    "aurangabad": "Aurangabad",
+    "shirdi": "Shirdi",
+    "shridi": "Shirdi",
+    "sangli": "Sangli",
+    "sangali": "Sangli",
+    "solapur": "Solapur",
+    "solhapur": "Solapur",
+    "satara": "Satara",
+    "pune": "Pune",
+    "kolhapur": "Kolhapur",
+    "mumbai thane": "Mumbai & Thane",
+    "mumbai": "Mumbai",
+    "belgav": "Belgav",
+    "belgaum": "Belgav",
+    "bengaluru": "Bengaluru",
+    "goa": "Goa"
+}
+
+
+def canonicalize_city(name):
+    """Return a canonical city name for known variants, otherwise return the trimmed original or None.
+
+    This is lenient and compares a normalized key (lowercased, punctuation removed).
+    """
+    if not name:
+        return None
+    key = ''.join(ch for ch in name.lower() if ch.isalnum() or ch.isspace()).strip()
+    key = ' '.join(key.split())
+    return _CITY_CANON.get(key) or name.strip()
+
 
 def get_db_conn():
     conn = getattr(g, "_pg_conn", None)
@@ -151,6 +189,17 @@ def api_book():
     if not service or not name or not phone:
         return jsonify({"error": "missing required fields (service, user_name, user_phone)"}), 400
 
+    # Normalize some fields before saving
+    from_city = canonicalize_city(data.get("from"))
+    to_city = canonicalize_city(data.get("to"))
+    from_point = data.get("from_point")
+    to_point = data.get("to_point")
+    journey_date = data.get("date") or None
+    journey_time = data.get("time")
+    pickup_time = data.get("pickup_time") or None
+    seats = int(data.get("seats") or 0)
+    amount = float(data.get("amount") or 0)
+
     conn = get_db_conn()
     cur = conn.cursor()
     cur.execute(
@@ -162,15 +211,15 @@ def api_book():
         """,
         (
             service,
-            data.get("from"),
-            data.get("from_point"),
-            data.get("to"),
-            data.get("to_point"),
-            data.get("date") or None,
-            data.get("time"),
-            data.get("pickup_time") or None,
-            int(data.get("seats") or 0),
-            float(data.get("amount") or 0),
+            from_city,
+            from_point,
+            to_city,
+            to_point,
+            journey_date,
+            journey_time,
+            pickup_time,
+            seats,
+            amount,
             name,
             phone,
             data.get("user_email"),
@@ -311,10 +360,10 @@ def verify_payment_and_save():
             RETURNING id
             """,
             (
-                booking.get("service_type") or booking.get("service"),
-                booking.get("from"),
+                (booking.get("service_type") or booking.get("service")),
+                canonicalize_city(booking.get("from")),
                 booking.get("from_point"),
-                booking.get("to"),
+                canonicalize_city(booking.get("to")),
                 booking.get("to_point"),
                 booking.get("date") or None,
                 booking.get("time"),
@@ -369,10 +418,10 @@ def api_save_failed():
             RETURNING id
             """,
             (
-                booking.get("service_type") or booking.get("service"),
-                booking.get("from"),
+                (booking.get("service_type") or booking.get("service")),
+                canonicalize_city(booking.get("from")),
                 booking.get("from_point"),
-                booking.get("to"),
+                canonicalize_city(booking.get("to")),
                 booking.get("to_point"),
                 booking.get("date") or None,
                 booking.get("time"),
