@@ -183,3 +183,27 @@
 .btn-book:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(77,74,222,0.22)}
 
 @media(max-width:900px){.cars-grid{grid-template-columns:1fr}.car-images img{height:120px}}
+
+/* Contact page styles */
+.contact-section{padding:48px 0}
+.contact-container{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 420px;gap:36px;align-items:start;padding:0 1rem}
+.contact-left{background:#fff;padding:48px;border-radius:6px}
+.opening-line{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+.opening-label{color:#f5b000;font-weight:800;font-size:18px;letter-spacing:0.02em}
+.opening-value{font-size:56px;font-weight:900;color:#111;line-height:1}
+.contact-intro{color:#4b5563;max-width:560px;font-size:15px;line-height:1.7;margin-top:6px;margin-bottom:24px}
+.contact-list{list-style:none;padding:0;margin:0;margin-top:8px;display:flex;flex-direction:column;gap:18px}
+.contact-list li{display:flex;gap:16px;align-items:flex-start;font-weight:700;color:#111}
+.icon{flex:0 0 38px;display:inline-flex;align-items:center;justify-content:center}
+.contact-title{font-size:18px;font-weight:800;color:#111;text-transform:uppercase}
+.contact-right{background:#f3f3f3;border-radius:6px;padding:30px;display:flex;align-items:center;justify-content:center}
+.contact-card{width:100%;max-width:380px}
+.contact-card-title{text-align:center;font-size:26px;font-weight:900;margin:2px 0 18px;color:#111}
+.contact-form label{display:block;font-weight:700;margin-bottom:8px;font-size:0.9rem;color:#333}
+.contact-form input,.contact-form textarea{width:100%;padding:12px 14px;border-radius:6px;border:1px solid #e6e6e6;background:#fff;color:#111;font-size:14px;box-shadow:none}
+.contact-form textarea{min-height:140px;resize:vertical}
+.form-actions{display:flex;justify-content:center;margin-top:18px}
+.btn-send{background:#f5b000;border:none;color:#111;padding:12px 40px;border-radius:40px;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(245,176,0,0.18)}
+.required{color:#d33;font-weight:700;margin-left:4px}
+.contact-form input:focus,.contact-form textarea:focus{outline:none;border-color:#d6c1a0;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+@media(max-width:900px){.contact-container{grid-template-columns:1fr}.opening-value{font-size:40px}.contact-right{order:2}.contact-left{order:1;padding:28px}.contact-section{padding:28px 0}}
