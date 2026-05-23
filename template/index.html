@@ -9,10 +9,11 @@
 </head>
 <body>
 
-  <header>
-    <img src="static/img/logo.png" alt="Yes Cab Logo">
-    <div style="font-weight:700;font-size:1.2rem;line-height:1.1;text-align:center">
-      𝐘𝐄𝐒 𝐂𝐀𝐁 𝐒𝐄𝐑𝐕𝐈𝐂𝐄𝐒 
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="{{ url_for('index') }}" class="logo-link"><img src="static/img/logo.png" alt="Yes Cab Logo" class="site-logo"></a>
+      <div class="site-title">𝐘𝐄𝐒 𝐂𝐀𝐁 𝐒𝐄𝐑𝐕𝐈𝐂𝐄𝐒</div>
+      
     </div>
   </header>
 
@@ -103,6 +104,7 @@
                 </div>
 
                 <div style="display:flex;align-items:flex-end;gap:12px">
+                  <button type="button" class="btn howto-btn" data-service="daily" style="background:#f8f8f8;color:#222;border:1px solid #ddd">How to Book</button>
                   <button type="button" class="btn goto-booking" data-service="daily">Book Now</button>
                 </div>
               </form>
@@ -167,7 +169,8 @@
                   <label class="form-label mb-1">Amount</label>
                   <input type="text" class="form-control" id="airportAmount" readonly>
                 </div>
-                <div style="display:flex;align-items:flex-end">
+                <div style="display:flex;align-items:flex-end;gap:8px">
+                  <button type="button" class="btn howto-btn" data-service="airport" style="background:#f8f8f8;color:#222;border:1px solid #ddd">How to Book</button>
                   <button type="button" class="btn goto-booking" data-service="airport">Book Now</button>
                 </div>
               </form>
@@ -227,7 +230,8 @@
                   <label class="form-label mb-1">Amount</label>
                   <input type="text" class="form-control" id="onewayAmount" readonly>
                 </div>
-                <div style="display:flex;align-items:flex-end">
+                <div style="display:flex;align-items:flex-end;gap:8px">
+                  <button type="button" class="btn howto-btn" data-service="oneway" style="background:#f8f8f8;color:#222;border:1px solid #ddd">How to Book</button>
                   <button type="button" class="btn goto-booking" data-service="oneway">Book Now</button>
                 </div>
               </form>
@@ -340,15 +344,42 @@
   </div>
   <!-- Footer End -->
 
-  <!-- Help Chat Button -->
-  <a id="help-chat" class="chat-float" href="https://wa.me/919956530909?text=Hi%20Admin%2C%20I%20need%20help" target="_blank" rel="noopener" aria-label="Chat with admin on WhatsApp">
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-      <path d="M20.52 3.48A11.94 11.94 0 0012 0C5.37 0 .01 5.36.01 12c0 2.1.55 4.14 1.6 5.95L0 24l6.35-1.66A11.93 11.93 0 0012 24c6.63 0 12-5.36 12-12 0-3.2-1.25-6.2-3.48-8.52z" fill="#25D366"/>
-      <path d="M17.2 14.1a6.09 6.09 0 01-3.32 1.1c-1.77 0-2.94-.83-4.05-1.66-.78-.57-1.75-1.22-1.75-2.12 0-.88.52-1.37 1-1.9.48-.55.77-.8 1.14-1.08.36-.28.47-.46.71-.39.25.07.97.36 1.16.41.19.06.32.09.46-.06.14-.16.64-.75.86-1.02.22-.27.43-.24.61-.18.19.06 1.21.55 1.41.66.2.11.33.16.48.03.15-.12.61-.71.86-1 .25-.26.5-.24.83-.14.33.1 1.78.84 2.06 1.01.28.18.47.27.49.43.02.16.02.89-.04 1.12-.06.23-.12.39-.25.63-.13.24-.59.96-.88 1.36-.29.4-.58.52-.95.85-.37.33-.63.33-1.1.51-.47.18-1.97.51-2.28.6-.31.09-.5.08-.78-.03-.28-.11-1.02-.37-1.37-.62-.35-.25-.66-.3-.86-.18-.2.12-.68.59-.86.83-.18.24-.22.4-.11.59.11.19.92 1.39 2.24 2.23 1.32.84 2.35 1.08 3.02 1.16.67.08 1.38.03 2.25-.39.87-.42 1.81-1.32 2.07-2.33.27-1.01.27-1.87.19-2.17-.08-.29-.5-.4-.87-.39-.37.01-1.02.14-1.29.4z" fill="#fff"/>
-    </svg>
-  </a>
+  <!-- Left-side Phone Button -->
+  <div id="leftContact" style="position:fixed;left:12px;bottom:12px;display:flex;flex-direction:column;gap:12px;z-index:10000">
+    <a href="tel:+919956530909" title="Call us" style="display:flex;width:56px;height:56px;border-radius:50%;align-items:center;justify-content:center;overflow:hidden;background:#007bff;box-shadow:0 6px 12px rgba(0,0,0,0.12)">
+      <img src="{{ url_for('static', filename='img/phone-call.png') }}" alt="Call" style="width:28px;height:28px" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
+      <svg style="display:none;width:28px;height:28px;fill:#fff" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1C10.07 21 3 13.93 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.24.2 2.45.57 3.57a1 1 0 01-.24 1.02l-2.21 2.2z"/></svg>
+    </a>
+  </div>
 
-  <!-- load JS (Flask) -->
+  <!-- How-to Booking Modal -->
+  <div id="howtoOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:center;justify-content:center">
+    <div id="howtoModal" style="background:#fff;max-width:640px;width:92%;border-radius:8px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,0.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 id="howtoTitle" style="margin:0">How to Book</h3>
+        <button id="howtoClose" class="btn" style="background:transparent;border:0;font-size:18px">✕</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="howto-tab btn" data-service="daily" style="background:#f4f4f4">Sharing Cab</button>
+        <button class="howto-tab btn" data-service="airport">Airport</button>
+        <button class="howto-tab btn" data-service="oneway">One Way</button>
+      </div>
+      <div id="howtoContent" style="max-height:320px;overflow:auto;color:#222"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button id="howtoGotIt" class="btn" style="background:#007bff;color:#fff">Got it</button>
+      </div>
+    </div>
+    </div>
+
+    <!-- Right-bottom WhatsApp Button -->
+    <div id="whatsappFloat" style="position:fixed;right:12px;bottom:12px;z-index:10000">
+      <a href="https://wa.me/919956530909?text=Hi%20Admin%2C%20I%20want%20details" target="_blank" rel="noopener" title="Message on WhatsApp" style="display:flex;width:56px;height:56px;border-radius:50%;align-items:center;justify-content:center;background:#25D366;box-shadow:0 6px 12px rgba(0,0,0,0.12)">
+        <img src="{{ url_for('static', filename='img/whatsapp.png') }}" alt="WhatsApp" style="width:28px;height:28px" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
+        <svg style="display:none;width:28px;height:28px;fill:#fff" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20.52 3.48A11.94 11.94 0 0012 0C5.37 0 .01 5.36.01 12c0 2.1.55 4.14 1.6 5.95L0 24l6.35-1.66A11.93 11.93 0 0012 24c6.63 0 12-5.36 12-12 0-3.2-1.25-6.2-3.48-8.52zM17.2 14.1a6.09 6.09 0 01-3.32 1.1c-1.77 0-2.94-.83-4.05-1.66-.78-.57-1.75-1.22-1.75-2.12 0-.88.52-1.37 1-1.9.48-.55.77-.8 1.14-1.08.36-.28.47-.46.71-.39.25.07.97.36 1.16.41.19.06.32.09.46-.06.14-.16.64-.75.86-1.02.22-.27.43-.24.61-.18.19.06 1.21.55 1.41.66.2.11.33.16.48.03.15-.12.61-.71.86-1 .25-.26.5-.24.83-.14.33.1 1.78.84 2.06 1.01.28.18.47.27.49.43.02.16.02.89-.04 1.12-.06.23-.12.39-.25.63-.13.24-.59.96-.88 1.36-.29.4-.58.52-.95.85-.37.33-.63.33-1.1.51-.47.18-1.97.51-2.28.6-.31.09-.5.08-.78-.03-.28-.11-1.02-.37-1.37-.62-.35-.25-.66-.3-.86-.18-.2.12-.68.59-.86.83-.18.24-.22.4-.11.59.11.19.92 1.39 2.24 2.23 1.32.84 2.35 1.08 3.02 1.16.67.08 1.38.03 2.25-.39.87-.42 1.81-1.32 2.07-2.33.27-1.01.27-1.87.19-2.17-.08-.29-.5-.4-.87-.39-.37.01-1.02.14-1.29.4z"/></svg>
+      </a>
+    </div>
+
+    <!-- load JS (Flask) -->
   <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -358,6 +389,86 @@
           window.location.href = "{{ url_for('booking') }}";
         });
       }
+    });
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      function setActiveTab(service) {
+        document.querySelectorAll('.howto-tab').forEach(btn => {
+          btn.style.background = (btn.dataset.service === service) ? '#007bff' : '#f4f4f4';
+          btn.style.color = (btn.dataset.service === service) ? '#fff' : '#000';
+        });
+      }
+
+      function renderSteps(service) {
+        const content = document.getElementById('howtoContent');
+        let steps = [];
+        if (service === 'airport') {
+          steps = [
+            'Choose the service type: Pickup from Airport or Drop to Airport.',
+            'Select pickup city and drop city.',
+            'Select car type.',
+            'Choose journey date (same-day bookings not available).',
+            'Select journey time.',
+            'Amount will display in the Amount box.',
+            'Click "Book Now".',
+            'On the Booking page check the booking summary carefully.',
+            'Read the Policy and add passenger details.',
+            'Click "Pay now" to make payment.',
+            'After payment, view/download your ticket and you will receive an SMS confirmation.'
+          ];
+        } else if (service === 'oneway') {
+          steps = [
+            'Select pickup city and drop city for One Way trip.',
+            'Select car type.',
+            'Choose journey date (same-day bookings not available).',
+            'Select journey time.',
+            'Select number of seats if applicable.',
+            'Amount will display in the Amount box.',
+            'Click "Book Now".',
+            'On the Booking page check the booking summary carefully.',
+            'Read the Policy and add passenger details.',
+            'Click "Pay now" to make payment.',
+            'After payment, view/download your ticket and you will receive an SMS confirmation.'
+          ];
+        } else {
+          steps = [
+            'Select pickup city.',
+            'Select pickup point (appears after selecting city).',
+            'Select drop city.',
+            'Select drop point (appears after selecting city).',
+            'Choose journey date (same-day bookings not available).',
+            'Select journey time.',
+            'Select number of seats.',
+            'Pricing will display in the Amount box.',
+            'Click "Book Now".',
+            'On the Booking page check the booking summary carefully.',
+            'Read the Policy and add passenger details.',
+            'Click "Pay now" to make payment.',
+            'After payment, view/download your ticket and you will receive an SMS confirmation.'
+          ];
+        }
+        content.innerHTML = '<ol>' + steps.map(s => '<li style="margin:8px 0">'+s+'</li>').join('') + '</ol>';
+        setActiveTab(service);
+      }
+
+      document.querySelectorAll('.howto-btn').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          const svc = btn.dataset.service || 'daily';
+          const overlay = document.getElementById('howtoOverlay');
+          if (!overlay) return;
+          overlay.style.display = 'flex';
+          renderSteps(svc);
+        });
+      });
+
+      document.querySelectorAll('.howto-tab').forEach(tab=>{
+        tab.addEventListener('click', function(){ renderSteps(tab.dataset.service); });
+      });
+
+      document.getElementById('howtoClose')?.addEventListener('click', function(){ document.getElementById('howtoOverlay').style.display = 'none'; });
+      document.getElementById('howtoGotIt')?.addEventListener('click', function(){ document.getElementById('howtoOverlay').style.display = 'none'; });
+      document.getElementById('howtoOverlay')?.addEventListener('click', function(e){ if (e.target === this) this.style.display = 'none'; });
     });
   </script>
 </body>

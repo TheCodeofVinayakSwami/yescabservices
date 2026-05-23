@@ -136,20 +136,20 @@ document.addEventListener('DOMContentLoaded', function() {
     "Kolhapur-Pune": { "Ertiga": 4500, "Kia Carens": 7000, "Swift": 3500 },
     "Kolhapur-Mumbai": { "Ertiga": 8500, "Kia Carens": 11000, "Swift": 7500 },
     "Kolhapur-Bengaluru": { "Ertiga": 12500, "Kia Carens": 14000, "Swift": 10500 },
-    "Kolhapur-Belgav": { "Ertiga": 4500, "Kia Carens": 5500, "Swift": 3200 },
+    "Kolhapur-Belgav": { "Ertiga": 4300, "Kia Carens": 5500, "Swift": 3200 },
 
-    "Pune-Kolhapur": { "Ertiga": 5000, "Kia Carens": 7000, "Swift": 3500 },
-    "Pune-Mumbai": { "Swift": 3500 },
-    "Pune-Belgav": { "Swift": 6300 },
-    // Pune-Bengaluru: intentionally left without Swift price
+    "Pune-Kolhapur": { "Ertiga": 4500, "Kia Carens": 7000, "Swift": 3500 },
+    "Pune-Mumbai": { "Ertiga": 4000, "Kia Carens": 7000, "Swift": 3500},
+    "Pune-Belgav": { "Ertiga": 7000,  "Kia Carens": 7000, "Swift": 6300 },
+    "Pune-Bengaluru": { "Ertiga": 16000,  "Kia Carens": 7000,  },
 
-    "Mumbai-Kolhapur": { "Ertiga": 8500, "Kia Carens": 11000, "Swift": 6000 },
-    "Mumbai-Pune": { "Swift": 3500 },
-    // Mumbai-Belgav: keep empty
+    "Mumbai-Kolhapur": { "Ertiga": 9500, "Kia Carens": 11000, "Swift": 6000 },
+    "Mumbai-Pune": { "Ertiga": 4500, "Kia Carens": 11000, "Swift": 3500 },
+    "Mumbai-Belgav": { "Ertiga": 12000, "Kia Carens": 14000, },
     // Mumbai-Bengaluru: keep empty
 
     "Belgav-Kolhapur": { "Ertiga": 4500, "Kia Carens": 5500, "Swift": 3200 },
-    "Belgav-Pune": { "Swift": 6300 },
+   "Belgav-Pune": { "Swift": 6300 },
     // Belgav-Mumbai: keep empty
     // Belgav-Bengaluru: keep empty
 
