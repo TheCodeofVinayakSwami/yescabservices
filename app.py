@@ -163,6 +163,12 @@ def contact():
     return render_template("contact.html")
 
 
+@app.route('/googled0ce29d311862936.html')
+def google_verification():
+    # Serve Google site verification file from the static folder so it's reachable at the site root
+    return app.send_static_file('googled0ce29d311862936.html')
+
+
 @app.route("/booking")
 def booking():
     params = request.args.to_dict()
