@@ -188,6 +188,29 @@ If you have a custom domain (e.g., `yescab.com`):
 
 ---
 
+## Razorpay Webhook + Telegram Setup
+
+To ensure the admin receives booking/ticket details when a payment succeeds, configure a Razorpay webhook and a Telegram bot for admin-only notifications.
+
+- Add these environment variables to your deployment/service:
+   - `RZP_WEBHOOK_SECRET`: a shared secret you set in the Razorpay webhook config (recommended)
+   - `TELEGRAM_BOT_TOKEN`: the bot token from BotFather (format: `123456:ABC-...`)
+   - `TELEGRAM_ADMIN_CHAT_ID`: the numeric chat id where admin receives messages
+   - `APP_BASE_URL` (optional): public URL of your app, used to include an admin link in messages
+
+- In Razorpay dashboard → Webhooks, create a webhook with:
+   - URL: `https://<your-domain>/api/webhook/razorpay`
+   - Events: choose `payment.captured` (or `payment.*` if you want broader events)
+   - Secret: set the same value as your `RZP_WEBHOOK_SECRET`
+
+- The Flask app now exposes `/api/webhook/razorpay` which:
+   - verifies the webhook signature
+   - stores the raw webhook in `payment_webhooks`
+   - updates the matching `bookings` row (by `external_id` == Razorpay `order_id`)
+   - sends a detailed admin-only Telegram message (no messages sent to users)
+
+- After changing env vars, redeploy/restart your service so the new variables take effect.
+
 ## Files Used in Deployment
 
 - **`Procfile`** – Tells Render how to start the app (`gunicorn app:app --bind 0.0.0.0:$PORT`)

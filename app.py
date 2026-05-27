@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+import time
 from flask import Flask, render_template, request, url_for, redirect, g, jsonify
 import psycopg2
 import psycopg2.extras
@@ -10,6 +11,8 @@ import hashlib
 import base64
 import json
 import logging
+import requests
+import re
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))  # optional .env
@@ -269,13 +272,162 @@ def admin():
     return render_template("admin.html", bookings=bookings)
 
 
-# Razorpay keys
+# Razorpay keys (read from environment; do NOT hard-code secrets)
 RZP_KEY_ID = os.environ.get("RZP_KEY_ID")
 RZP_KEY_SECRET = os.environ.get("RZP_KEY_SECRET")
 rzp_client = razorpay.Client(auth=(RZP_KEY_ID, RZP_KEY_SECRET)) if RZP_KEY_ID and RZP_KEY_SECRET else None
 # Merchant UPI ID (VPA) - set via environment variable, e.g. MERCHANT_UPI=merchant@bank
 MERCHANT_UPI = os.environ.get("MERCHANT_UPI")
+# Webhook secret configured in Razorpay dashboard (optional but recommended)
+RZP_WEBHOOK_SECRET = os.environ.get("RZP_WEBHOOK_SECRET")
+# Telegram admin notifications (token and admin chat id must be configured in env)
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_ADMIN_CHAT_ID = os.environ.get("TELEGRAM_ADMIN_CHAT_ID")
+# Optional base URL (used to build admin links in messages)
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "")
+# Google Places configuration (optional — set in .env)
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+GOOGLE_PLACE_ID = os.environ.get("GOOGLE_PLACE_ID")
+GOOGLE_PLACE_NAME = os.environ.get("GOOGLE_PLACE_NAME")
+# Simple in-memory cache for Google reviews
+_google_reviews_cache = {"expires": 0, "data": None}
+
 logging.basicConfig(level=logging.INFO)
+
+
+def send_telegram_to_admin(message: str, parse_mode: str = "HTML") -> bool:
+    """Send a text message to the configured admin Telegram chat.
+
+    Returns True on success, False otherwise. This is best-effort and
+    does not raise on failure.
+    """
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_ADMIN_CHAT_ID:
+        logging.warning("Telegram not configured: skip sending admin notification")
+        return False
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        resp = requests.post(url, data={
+            "chat_id": TELEGRAM_ADMIN_CHAT_ID,
+            "text": message,
+            "parse_mode": parse_mode,
+        }, timeout=10)
+        if not resp.ok:
+            logging.warning("Telegram API error %s: %s", resp.status_code, resp.text)
+            return False
+        return True
+    except Exception:
+        logging.exception("Exception while sending Telegram message")
+        return False
+
+
+def fetch_google_place_reviews(api_key: str, place_id: str = None, place_name: str = None, ttl: int = 300):
+    """Fetch place details and reviews from Google Places API.
+
+    Returns a dict with keys: place_id, name, address, reviews (list) or {'error': msg}.
+    Uses a simple in-memory cache for `ttl` seconds.
+    """
+    now = time.time()
+    if _google_reviews_cache.get("expires", 0) > now and _google_reviews_cache.get("data"):
+        return _google_reviews_cache["data"]
+
+    if not api_key:
+        return {"error": "GOOGLE_API_KEY not configured"}
+
+    try:
+        # If we don't have a place_id, try to find one by text (business name)
+        if not place_id:
+            if not place_name:
+                return {"error": "No GOOGLE_PLACE_ID or GOOGLE_PLACE_NAME configured"}
+            # Find place by text
+            find_url = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
+            params = {
+                "input": place_name,
+                "inputtype": "textquery",
+                "fields": "place_id,name,formatted_address",
+                "key": api_key,
+            }
+            r = requests.get(find_url, params=params, timeout=8)
+            j = r.json() if r.ok else {}
+            candidates = j.get("candidates") or []
+            if not candidates:
+                return {"error": "Place not found via GOOGLE_PLACE_NAME"}
+            place_id = candidates[0].get("place_id")
+
+        # Now fetch place details including reviews
+        details_url = "https://maps.googleapis.com/maps/api/place/details/json"
+        params = {
+            "place_id": place_id,
+            "fields": "name,rating,reviews,formatted_address,place_id",
+            "key": api_key,
+        }
+        r = requests.get(details_url, params=params, timeout=8)
+        if not r.ok:
+            return {"error": f"Google Places request failed: {r.status_code}"}
+        j = r.json()
+        status = j.get("status")
+        if status != "OK":
+            return {"error": f"Google Places API status: {status}", "raw": j}
+
+        result = j.get("result", {})
+        reviews = result.get("reviews", []) or []
+        # Keep only common review fields to reduce payload
+        cleaned = []
+        for rv in reviews:
+            cleaned.append({
+                "author_name": rv.get("author_name"),
+                "rating": rv.get("rating"),
+                "text": rv.get("text"),
+                "relative_time_description": rv.get("relative_time_description"),
+                "profile_photo_url": rv.get("profile_photo_url"),
+                "time": rv.get("time"),
+            })
+
+        data = {
+            "place_id": result.get("place_id") or place_id,
+            "name": result.get("name"),
+            "address": result.get("formatted_address"),
+            "reviews": cleaned,
+        }
+        # Cache result
+        _google_reviews_cache["data"] = data
+        _google_reviews_cache["expires"] = now + ttl
+        return data
+    except Exception:
+        logging.exception("Failed to fetch Google place reviews")
+        return {"error": "exception while fetching reviews"}
+
+
+def extract_reviews_from_share_html(html: str):
+    """Extract simple review blocks from a Google share page HTML string.
+
+    This uses heuristic regexes to pull author and review text. Returns
+    a list of {author_name, rating, text} dictionaries.
+    """
+    try:
+        reviews = []
+        # Pattern: Author name followed by [Image: 5 stars] and the review paragraph
+        pat = re.compile(r'([A-Z][A-Za-z .]{2,80})\s*\[Image:\s*5\s*stars\]\s*(?:[0-9]+\s+(?:months?|years?|days?)\s+ago\s*)?([\s\S]{30,500}?)(?=(?:Like\s|Share\s|\.{3}|\[Image:|Map data))', re.I)
+        for m in pat.finditer(html):
+            author = re.sub(r"\s+", " ", m.group(1)).strip()
+            text = re.sub(r"\s+", " ", m.group(2)).strip()
+            text = re.sub(r"\.{2,}$", "", text).strip()
+            text = text.split(' Like')[0].split('Share')[0].strip()
+            if len(text) > 10:
+                reviews.append({"author_name": author, "rating": 5, "text": text})
+
+        # Fallback: look for 'X months ago' followed by a review paragraph
+        if not reviews:
+            pat2 = re.compile(r"\d+\s+(?:months?|days?|years?)\s+ago\s+([\s\S]{30,400}?)(?=(?:Like\s|Share\s|\.{3}|\[Image:|Map data))", re.I)
+            for m in pat2.finditer(html):
+                text = re.sub(r"\s+", " ", m.group(1)).strip()
+                text = text.split(' Like')[0].split('Share')[0].strip()
+                if len(text) > 10:
+                    reviews.append({"author_name": "Customer", "rating": 5, "text": text})
+
+        return reviews
+    except Exception:
+        logging.exception("Failed to parse share HTML for reviews")
+        return []
 
 
 
@@ -363,7 +515,7 @@ def verify_payment_and_save():
             INSERT INTO bookings
               (service_type, from_city, from_point, to_city, to_point, journey_date, journey_time, pickup_time, seats, amount, user_name, user_phone, user_email, external_id, payment_status, payment_id, webhook_payload, created_at)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            RETURNING id
+            RETURNING id, user_name, user_phone, user_email, from_city, to_city, journey_date, seats, amount
             """,
             (
                 (booking.get("service_type") or booking.get("service")),
@@ -389,10 +541,161 @@ def verify_payment_and_save():
         row = cur.fetchone()
         conn.commit()
         cur.close()
+
+        # Notify admin via Telegram (do not send to user)
+        try:
+            msg = (
+                f"<b>Payment Received</b>\n"
+                f"Booking ID: {row.get('id')}\n"
+                f"Payment ID: {payment_id}\n"
+                f"Order ID: {order_id}\n"
+                f"Amount: {float(row.get('amount') or 0)}\n"
+                f"Name: {row.get('user_name')}\n"
+                f"Phone: {row.get('user_phone')}\n"
+                f"From: {row.get('from_city')} → To: {row.get('to_city')}\n"
+                f"Date: {row.get('journey_date')}\n"
+                f"Seats: {row.get('seats')}\n"
+            )
+            if APP_BASE_URL:
+                msg += f"\nAdmin: {APP_BASE_URL.rstrip('/')}/admin"
+            send_telegram_to_admin(msg)
+        except Exception:
+            logging.exception("Failed to build/send admin notification")
+
         return jsonify({"status":"ok","id": row["id"], "payment_id": payment_id}), 201
     except Exception as e:
         logging.exception('Failed to save booking after payment')
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/webhook/razorpay", methods=["POST"])
+def razorpay_webhook():
+    """Endpoint to receive Razorpay webhooks.
+
+    Verifies the signature, stores the raw webhook, updates matching booking
+    by `external_id` (order id) and notifies the admin Telegram chat.
+    """
+    raw_body = request.get_data()
+    signature = request.headers.get("X-Razorpay-Signature") or request.headers.get("x-razorpay-signature")
+    secret = RZP_WEBHOOK_SECRET or RZP_KEY_SECRET
+    if not signature or not secret:
+        return jsonify({"error": "missing signature or webhook secret"}), 400
+
+    # Verify signature
+    try:
+        if rzp_client:
+            # razorpay SDK expects the body as string
+            rzp_client.utility.verify_webhook_signature(raw_body.decode("utf-8"), signature, secret)
+        else:
+            gen = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(gen, signature):
+                return jsonify({"error": "signature mismatch"}), 400
+    except Exception:
+        logging.exception("Webhook signature verification failed")
+        return jsonify({"error": "signature mismatch"}), 400
+
+    # Parse payload
+    try:
+        payload = json.loads(raw_body.decode("utf-8"))
+    except Exception:
+        logging.exception("Invalid webhook payload")
+        return jsonify({"error": "invalid json"}), 400
+
+    # Persist raw webhook for debugging
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor()
+        payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {}) or {}
+        order_id = payment_entity.get("order_id")
+        cur.execute(
+            "INSERT INTO payment_webhooks (provider, external_id, payload, headers, processed) VALUES (%s,%s,%s,%s,%s)",
+            ("razorpay", order_id, json.dumps(payload), json.dumps(dict(request.headers)), False),
+        )
+        conn.commit()
+        cur.close()
+    except Exception:
+        logging.exception("Failed to persist webhook")
+
+    event = payload.get("event")
+    # Handle payment events
+    if event and event.startswith("payment."):
+        payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {}) or {}
+        order_id = payment_entity.get("order_id")
+        payment_id = payment_entity.get("id")
+        status = payment_entity.get("status")
+        amount = (payment_entity.get("amount") or 0) / 100.0
+        updated = None
+        try:
+            conn = get_db_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE bookings SET payment_status=%s, payment_id=%s, webhook_payload=%s WHERE external_id=%s RETURNING id, user_name, user_phone, user_email, from_city, to_city, journey_date, seats, amount",
+                (status, payment_id, json.dumps(payload), order_id),
+            )
+            updated = cur.fetchone()
+            conn.commit()
+            cur.close()
+        except Exception:
+            logging.exception("Failed to update booking from webhook")
+            updated = None
+
+        if updated:
+            try:
+                msg = (
+                    f"<b>New Booking Paid</b>\n"
+                    f"Booking ID: {updated.get('id')}\n"
+                    f"Payment ID: {payment_id}\n"
+                    f"Order ID: {order_id}\n"
+                    f"Amount: {amount}\n"
+                    f"Name: {updated.get('user_name')}\n"
+                    f"Phone: {updated.get('user_phone')}\n"
+                    f"From: {updated.get('from_city')} → {updated.get('to_city')}\n"
+                    f"Date: {updated.get('journey_date')}\n"
+                    f"Seats: {updated.get('seats')}\n"
+                )
+                if APP_BASE_URL:
+                    msg += f"\nAdmin: {APP_BASE_URL.rstrip('/')}/admin"
+                send_telegram_to_admin(msg)
+            except Exception:
+                logging.exception("Failed to notify admin about webhook booking")
+
+    return jsonify({"status": "ok"}), 200
+
+
+@app.route("/api/google_reviews")
+def api_google_reviews():
+    """Return recent Google reviews for the configured place.
+
+    If `GOOGLE_API_KEY` (and optionally `GOOGLE_PLACE_ID` or `GOOGLE_PLACE_NAME`) are set,
+    this will attempt to fetch live reviews. Otherwise a small static fallback is returned.
+    """
+    share_url = request.args.get('share_url')
+
+    # Try live Places API first (if configured)
+    if GOOGLE_API_KEY:
+        data = fetch_google_place_reviews(GOOGLE_API_KEY, place_id=GOOGLE_PLACE_ID, place_name=GOOGLE_PLACE_NAME)
+        if not data.get("error"):
+            return jsonify({"source": "google", "place": data.get("name"), "place_id": data.get("place_id"), "reviews": data.get("reviews", [])}), 200
+
+    # If a share URL is provided, try to fetch and parse its HTML for review text
+    if share_url:
+        try:
+            headers = {"User-Agent": "Mozilla/5.0 (compatible)"}
+            r = requests.get(share_url, headers=headers, timeout=8)
+            if r.ok:
+                items = extract_reviews_from_share_html(r.text)
+                if items:
+                    return jsonify({"source": "share", "reviews": items}), 200
+        except Exception:
+            logging.exception("Failed to fetch/parse share URL")
+
+    # fallback static reviews (user-provided content)
+    static_reviews = [
+        {"author_name": "Dr. Sandip Trivedi", "rating": 5, "text": "I had a wonderful experience with this cab service. The booking process was easy, the driver arrived on time, and the vehicle was neat and well-maintained. Truly reliable service — will definitely use again and recommend to others.", "relative_time_description": "2 months ago"},
+        {"author_name": "Customer", "rating": 5, "text": "Very well maintained car, professional and safe driving experience.", "relative_time_description": ""},
+        {"author_name": "Customer", "rating": 5, "text": "Excellent Service, Clean and new cars Good Driver,Ok time service", "relative_time_description": ""},
+    ]
+    return jsonify({"source": "static", "reviews": static_reviews}), 200
 
 
 @app.route("/api/config")

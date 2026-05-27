@@ -9,7 +9,7 @@
     .menu-bar{background:var(--primary);padding:0}
     .menu-list{list-style:none;margin:0;padding:0;display:flex;justify-content:center;gap:0}
     .menu-list li{flex:1;max-width:200px;text-align:center}
-    .menu-list li a{display:block;color:#d5caca;padding:14px 20px;text-decoration:none;font-weight:500;transition:background 0.3s ease}
+    .menu-list li a{display:block;color:#fbfbfb;padding:14px 20px;text-decoration:none;font-weight:500;transition:background 0.3s ease}
     .menu-list li a:hover{background:rgba(0,0,0,0.2)}
     
     main{min-height:60vh}
