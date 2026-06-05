@@ -103,13 +103,13 @@
 }
 
 .tourism-img img {
-    height: 200px; /* Fixed height for uniformity */
+    height: 100px; /* Fixed height for uniformity */
     object-fit: cover; /* Ensures images cover the area without distortion */
 }
 
 .tourism-content {
     background-color: white; /* White background for content */
-    border-radius: 0 0 10px 10px; /* Rounded corners for the bottom */
+    border-radius: 0 0 10px 20px; /* Rounded corners for the bottom */
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
 }
 

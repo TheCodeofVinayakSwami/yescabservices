@@ -786,5 +786,28 @@ def ping():
 if __name__ == "__main__":
     # Use port from environment for compatibility with hosts like Render
     port = int(os.environ.get("PORT", 5000))
+    print(app.url_map)    
     debug = os.environ.get("FLASK_DEBUG", "0") in ("1", "true", "True")
     app.run(debug=debug, host="0.0.0.0", port=port)
+    
+    # login
+from flask import Flask, render_template, request
+
+app = Flask(__name__)
+
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+
+@app.route('/admin/login', methods=['POST'])
+def admin_login():
+    username = request.form.get('username')
+    password = request.form.get('password')
+
+    print("Username:", username)
+    print("Password:", password)
+
+    if username == "admin" and password == "1234":
+        return render_template('admindash.html')
+
+    return "Invalid Username or Password"
