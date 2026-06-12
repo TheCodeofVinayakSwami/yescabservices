@@ -783,35 +783,29 @@ def ping():
     return "OK", 200
 
 
+# Debug endpoint: list registered routes (safe to remove after debugging)
+@app.route("/_routes")
+def _routes():
+    routes = []
+    for rule in sorted(app.url_map.iter_rules(), key=lambda r: r.rule):
+        routes.append({
+            "rule": rule.rule,
+            "endpoint": rule.endpoint,
+            "methods": sorted([m for m in rule.methods if m not in ("HEAD", "OPTIONS")])
+        })
+    return jsonify({"routes": routes})
+
+
+# Log registered routes at startup
+try:
+    logging.info("Registered routes: %s", [r.rule for r in app.url_map.iter_rules()])
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     # Use port from environment for compatibility with hosts like Render
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("FLASK_DEBUG", "0") in ("1", "true", "True")
     app.run(debug=debug, host="0.0.0.0", port=port)
     
-    
-from flask import Flask, render_template, request, redirect
-
-app = Flask(__name__)
-
-# Open Login Page
-@app.route('/admin')
-def admin():
-    return render_template('admin.html')
-
-
-# Login Button Action
-@app.route('/admin/login', methods=['POST'])
-def admin_login():
-
-    username = request.form['username']
-    password = request.form['password']
-
-    if username == "admin" and password == "1234":
-        return render_template('admindash.html')
-
-    return "Invalid Username or Password"
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
