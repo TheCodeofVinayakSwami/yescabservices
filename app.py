@@ -146,9 +146,9 @@ def close_connection(exception):
             pass
 
 
-@app.route("/")
+@app.route('/')
 def index():
-    return render_template("index.html")
+    return render_template('index.html')
 
 
 @app.route("/policy")
@@ -201,30 +201,6 @@ def api_book():
     # Normalize some fields before saving
     from_city = canonicalize_city(data.get("from"))
     to_city = canonicalize_city(data.get("to"))
-    from_point = data.get("from_point")
-    to_point = data.get("to_point")
-    journey_date = data.get("date") or None
-    journey_time = data.get("time")
-    pickup_time = data.get("pickup_time") or None
-    seats = int(data.get("seats") or 0)
-    amount = float(data.get("amount") or 0)
-
-    conn = get_db_conn()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO bookings
-          (service_type, from_city, from_point, to_city, to_point, journey_date, journey_time, pickup_time, seats, amount, user_name, user_phone, user_email, created_at)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        RETURNING id
-        """,
-        (
-            service,
-            from_city,
-            from_point,
-            to_city,
-            to_point,
-            journey_date,
             journey_time,
             pickup_time,
             seats,
@@ -786,28 +762,32 @@ def ping():
 if __name__ == "__main__":
     # Use port from environment for compatibility with hosts like Render
     port = int(os.environ.get("PORT", 5000))
-    print(app.url_map)    
     debug = os.environ.get("FLASK_DEBUG", "0") in ("1", "true", "True")
     app.run(debug=debug, host="0.0.0.0", port=port)
     
-    # login
-from flask import Flask, render_template, request
+    
+from flask import Flask, render_template, request, redirect
 
 app = Flask(__name__)
 
+# Open Login Page
 @app.route('/admin')
 def admin():
     return render_template('admin.html')
 
+
+# Login Button Action
 @app.route('/admin/login', methods=['POST'])
 def admin_login():
-    username = request.form.get('username')
-    password = request.form.get('password')
 
-    print("Username:", username)
-    print("Password:", password)
+    username = request.form['username']
+    password = request.form['password']
 
     if username == "admin" and password == "1234":
         return render_template('admindash.html')
 
     return "Invalid Username or Password"
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
