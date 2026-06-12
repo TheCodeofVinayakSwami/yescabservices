@@ -802,6 +802,13 @@ try:
 except Exception:
     pass
 
+# Debug prints to ensure output appears in Render logs during import
+try:
+    print("APP_MODULE_FILE:", __file__)
+    print("REGISTERED_ROUTES:", [r.rule for r in app.url_map.iter_rules()])
+except Exception as _e:
+    print("ROUTE_LIST_ERROR:", _e)
+
 
 if __name__ == "__main__":
     # Use port from environment for compatibility with hosts like Render
