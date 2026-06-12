@@ -201,6 +201,30 @@ def api_book():
     # Normalize some fields before saving
     from_city = canonicalize_city(data.get("from"))
     to_city = canonicalize_city(data.get("to"))
+    from_point = data.get("from_point")
+    to_point = data.get("to_point")
+    journey_date = data.get("date") or None
+    journey_time = data.get("time")
+    pickup_time = data.get("pickup_time") or None
+    seats = int(data.get("seats") or 0)
+    amount = float(data.get("amount") or 0)
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO bookings
+          (service_type, from_city, from_point, to_city, to_point, journey_date, journey_time, pickup_time, seats, amount, user_name, user_phone, user_email, created_at)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        RETURNING id
+        """,
+        (
+            service,
+            from_city,
+            from_point,
+            to_city,
+            to_point,
+            journey_date,
             journey_time,
             pickup_time,
             seats,
