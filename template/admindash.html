@@ -16,6 +16,31 @@
     .controls a, .controls button{margin-left:8px}
     .section-title{display:flex;justify-content:space-between;align-items:center}
     .section-title h3{margin:0}
+    /* Payment badge styles */
+    .badge{display:inline-block;padding:4px 8px;border-radius:6px;font-weight:600;font-size:12px}
+    .badge.success{background:#d4edda;color:#155724}
+    .badge.failed{background:#f8d7da;color:#721c24}
+    .badge.pending{background:#fff3cd;color:#856404}
+    .badge.na{background:#e2e3e5;color:#6c757d}
+    /* Calendar styles - larger header and rounded look */
+    .calendar-wrapper{width:100%;max-width:760px;margin:18px auto}
+    .calendar-top{background:#fff;border-radius:12px;padding:0 0 16px 0;box-shadow:0 6px 20px rgba(20,20,40,0.08)}
+    .calendar-big-header{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid #f0f2f7}
+    .calendar-big-header .left{display:flex;flex-direction:column}
+    .big-line{font-size:18px;font-weight:700;color:#222}
+    .small-line{font-size:13px;color:#666;margin-top:4px}
+    .calendar-controls{display:flex;justify-content:space-between;align-items:center;padding:12px 20px}
+    .calendar-controls .month-box{display:flex;align-items:center;gap:8px}
+    .month-box button{background:#fff;border:1px solid #eee;padding:8px 10px;border-radius:8px;cursor:pointer}
+    .day-names{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:0 20px;color:#6b7280;font-weight:600}
+    .date-cells{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;padding:12px 20px}
+    .cell{display:flex;align-items:center;justify-content:center}
+    .cell.empty{opacity:0.3}
+    .date-cell{width:56px;height:56px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:16px;color:#222;background:transparent}
+    .date-cell:hover{background:#f2f7ff;cursor:pointer}
+    .date-cell.has-booking{box-shadow:inset 0 -6px 0 rgba(255,200,120,0.25)}
+    .date-cell.selected{background:#1361f4;color:#fff;border-radius:50%;width:56px;height:56px}
+    #bookingsContainer{display:none;margin-top:18px}
   </style>
 </head>
 <body>
@@ -29,6 +54,33 @@
   </header>
 
   <main>
+    <!-- Calendar selector (large) -->
+    <section class="calendar-wrapper">
+      <div class="calendar-top">
+        <div class="calendar-big-header">
+          <div class="left">
+            <div id="bigHeaderLine1" class="big-line">Select a date</div>
+            <div id="bigHeaderLine2" class="small-line">Click any day to show bookings</div>
+          </div>
+          <div class="right">
+            <button id="monthToggle" style="padding:8px 10px;border-radius:8px;border:1px solid #eee;background:#fff">▾</button>
+          </div>
+        </div>
+        <div class="calendar-controls">
+          <div class="month-box">
+            <button id="prevMonth">‹</button>
+            <div id="monthYear" style="font-weight:700"></div>
+            <button id="nextMonth">›</button>
+          </div>
+          <div>
+            <button id="todayBtn" style="padding:6px 8px;margin-right:6px">Today</button>
+            <button id="clearDateBtn" style="padding:6px 8px">Clear</button>
+          </div>
+        </div>
+        <div id="calendarGrid" class="calendar-grid"></div>
+      </div>
+
+    <div id="bookingsContainer">
     <!-- Daily Sharing Cab -->
     <section class="section" id="dailySection">
       <div class="section-title">
@@ -40,30 +92,10 @@
         <thead>
           <tr>
             <th></th><th>ID</th><th>From</th><th>From Point</th><th>To</th><th>To Point</th>
-            <th>Date</th><th>Time</th><th>Seats</th><th>Amount</th><th>Name</th><th>Phone</th><th>Created</th>
+            <th>Date</th><th>Time</th><th>Seats</th><th>Amount</th><th>Name</th><th>Phone</th><th>Created</th><th>Payment</th>
           </tr>
         </thead>
-        <tbody>
-          {% for b in bookings|selectattr("service_type","equalto","daily")|list %}
-          <tr data-id="{{ b.id }}">
-            <td><input class="row-select" type="checkbox" value="{{ b.id }}"></td>
-            <td>{{ b.id }}</td>
-            <td>{{ b.from_city or '-' }}</td>
-            <td>{{ b.from_point or '-' }}</td>
-            <td>{{ b.to_city or '-' }}</td>
-            <td>{{ b.to_point or '-' }}</td>
-            <td>{{ b.journey_date or '-' }}</td>
-            <td>{{ b.journey_time or '-' }}</td>
-            <td>{{ b.seats or '-' }}</td>
-            <td>{{ b.amount or '-' }}</td>
-            <td>{{ b.user_name or '-' }}</td>
-            <td>{{ b.user_phone or '-' }}</td>
-            <td>{{ b.created_at }}</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="13" style="text-align:center;padding:12px">No daily sharing bookings.</td></tr>
-          {% endfor %}
-        </tbody>
+        <tbody></tbody>
       </table>
     </section>
 
@@ -78,30 +110,10 @@
         <thead>
           <tr>
             <th></th><th>ID</th><th>From</th><th>From Point</th><th>To</th><th>To Point</th>
-            <th>Date</th><th>Time</th><th>Pickup Time</th><th>Amount</th><th>Name</th><th>Phone</th><th>Created</th>
+            <th>Date</th><th>Time</th><th>Pickup Time</th><th>Amount</th><th>Name</th><th>Phone</th><th>Created</th><th>Payment</th>
           </tr>
         </thead>
-        <tbody>
-          {% for b in bookings|selectattr("service_type","equalto","airport")|list %}
-          <tr data-id="{{ b.id }}">
-            <td><input class="row-select" type="checkbox" value="{{ b.id }}"></td>
-            <td>{{ b.id }}</td>
-            <td>{{ b.from_city or '-' }}</td>
-            <td>{{ b.from_point or '-' }}</td>
-            <td>{{ b.to_city or '-' }}</td>
-            <td>{{ b.to_point or '-' }}</td>
-            <td>{{ b.journey_date or '-' }}</td>
-            <td>{{ b.journey_time or '-' }}</td>
-            <td>{{ b.pickup_time or '-' }}</td>
-            <td>{{ b.amount or '-' }}</td>
-            <td>{{ b.user_name or '-' }}</td>
-            <td>{{ b.user_phone or '-' }}</td>
-            <td>{{ b.created_at }}</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="13" style="text-align:center;padding:12px">No airport bookings.</td></tr>
-          {% endfor %}
-        </tbody>
+        <tbody></tbody>
       </table>
     </section>
 
@@ -116,33 +128,200 @@
         <thead>
           <tr>
             <th></th><th>ID</th><th>From</th><th>From Point</th><th>To</th><th>To Point</th>
-            <th>Date</th><th>Time</th><th>Amount</th><th>Name</th><th>Phone</th><th>Created</th>
+            <th>Date</th><th>Time</th><th>Amount</th><th>Name</th><th>Phone</th><th>Created</th><th>Payment</th>
           </tr>
         </thead>
-        <tbody>
-          {% for b in bookings|selectattr("service_type","equalto","oneway")|list %}
-          <tr data-id="{{ b.id }}">
-            <td><input class="row-select" type="checkbox" value="{{ b.id }}"></td>
-            <td>{{ b.id }}</td>
-            <td>{{ b.from_city or '-' }}</td>
-            <td>{{ b.from_point or '-' }}</td>
-            <td>{{ b.to_city or '-' }}</td>
-            <td>{{ b.to_point or '-' }}</td>
-            <td>{{ b.journey_date or '-' }}</td>
-            <td>{{ b.journey_time or '-' }}</td>
-            <td>{{ b.amount or '-' }}</td>
-            <td>{{ b.user_name or '-' }}</td>
-            <td>{{ b.user_phone or '-' }}</td>
-            <td>{{ b.created_at }}</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="12" style="text-align:center;padding:12px">No one way bookings.</td></tr>
-          {% endfor %}
-        </tbody>
+        <tbody></tbody>
       </table>
     </section>
 
+    </div> <!-- /#bookingsContainer -->
+
   </main>
+
+  <script>
+    // Client-side bookings data (serialized on server)
+    const BOOKINGS = {{ bookings_json|tojson|safe }} || [];
+
+    function escapeHtml(str){
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/[&<>"']/g, function(m){
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
+      });
+    }
+
+    function paymentBadge(b){
+      const status = String(b.payment_status || '').toLowerCase();
+      const pid = b.payment_id || b.external_id || '';
+      if(status){
+        if(status.includes('captur') || status.includes('paid') || status === 'paid') return '<span class="badge success">Success</span>';
+        if(status.includes('fail') || status.includes('error')) return '<span class="badge failed">Failed</span>';
+        return '<span class="badge pending">'+escapeHtml(b.payment_status)+'</span>';
+      }
+      if(pid) return '<span class="badge success">Success</span>';
+      return '<span class="badge na">N/A</span>';
+    }
+
+    // Calendar rendering
+    let calYear, calMonth;
+    function renderCalendar(year, month){
+      calYear = year; calMonth = month;
+      const monthYear = document.getElementById('monthYear');
+      monthYear.textContent = new Date(year, month).toLocaleString(undefined,{month:'long', year:'numeric'});
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const dn = document.createElement('div'); dn.className='day-names';
+      dayNames.forEach(d => { const el=document.createElement('div'); el.textContent=d; dn.appendChild(el); });
+      grid.appendChild(dn);
+      const cells = document.createElement('div'); cells.className='date-cells';
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month+1, 0).getDate();
+      for(let i=0;i<firstDay;i++){ const e=document.createElement('div'); e.className='cell empty'; cells.appendChild(e); }
+      for(let d=1; d<=daysInMonth; d++){
+        const e=document.createElement('div'); e.className='cell date-cell'; e.textContent=d;
+        const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        e.dataset.date = iso;
+        const has = BOOKINGS.some(b => b.journey_date === iso);
+        if(has) e.classList.add('has-booking');
+        e.addEventListener('click', ()=> selectDate(iso, e));
+        cells.appendChild(e);
+      }
+      grid.appendChild(cells);
+    }
+
+    function selectDate(iso, element){
+      // update big header with friendly date text
+      try{
+        const d = new Date(iso + 'T00:00:00');
+        const headerText = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+        document.getElementById('bigHeaderLine1').textContent = headerText;
+        document.getElementById('bigHeaderLine2').textContent = '';
+      }catch(e){
+        document.getElementById('bigHeaderLine1').textContent = iso;
+        document.getElementById('bigHeaderLine2').textContent = '';
+      }
+      // mark selected
+      document.querySelectorAll('.date-cell.selected').forEach(n => n.classList.remove('selected'));
+      if(element) element.classList.add('selected');
+      // show bookings container and render
+      document.getElementById('bookingsContainer').style.display = 'block';
+      renderBookingsForDate(iso);
+    }
+
+    function renderBookingsForDate(date){
+      const filtered = BOOKINGS.filter(b => b.journey_date === date);
+      const dailyBody = document.querySelector('#dailyTable tbody');
+      const airportBody = document.querySelector('#airportTable tbody');
+      const onewayBody = document.querySelector('#onewayTable tbody');
+      dailyBody.innerHTML=''; airportBody.innerHTML=''; onewayBody.innerHTML='';
+      if(filtered.length === 0){
+        const r = '<tr><td colspan="14" style="text-align:center;padding:12px">No bookings for '+escapeHtml(date)+'.</td></tr>';
+        dailyBody.innerHTML = r; airportBody.innerHTML = r; onewayBody.innerHTML = r; return;
+      }
+      filtered.forEach(b => {
+        const svc = b.service_type || b.service || 'daily';
+        const created = b.created_at || '';
+        if(svc === 'daily'){
+          const tr = document.createElement('tr'); tr.dataset.id = b.id;
+          tr.innerHTML = `<td><input class="row-select" type="checkbox" value="${b.id}"></td>`+
+            `<td>${escapeHtml(b.id)}</td>`+
+            `<td>${escapeHtml(b.from_city||'-')}</td>`+
+            `<td>${escapeHtml(b.from_point||'-')}</td>`+
+            `<td>${escapeHtml(b.to_city||'-')}</td>`+
+            `<td>${escapeHtml(b.to_point||'-')}</td>`+
+            `<td>${escapeHtml(b.journey_date||'-')}</td>`+
+            `<td>${escapeHtml(b.journey_time||'-')}</td>`+
+            `<td>${escapeHtml(b.seats||'-')}</td>`+
+            `<td>${escapeHtml(b.amount||'-')}</td>`+
+            `<td>${escapeHtml(b.user_name||'-')}</td>`+
+            `<td>${escapeHtml(b.user_phone||'-')}</td>`+
+            `<td>${escapeHtml(created)}</td>`+
+            `<td>${paymentBadge(b)}</td>`;
+          dailyBody.appendChild(tr);
+        } else if(svc === 'airport'){
+          const tr = document.createElement('tr'); tr.dataset.id = b.id;
+          tr.innerHTML = `<td><input class="row-select" type="checkbox" value="${b.id}"></td>`+
+            `<td>${escapeHtml(b.id)}</td>`+
+            `<td>${escapeHtml(b.from_city||'-')}</td>`+
+            `<td>${escapeHtml(b.from_point||'-')}</td>`+
+            `<td>${escapeHtml(b.to_city||'-')}</td>`+
+            `<td>${escapeHtml(b.to_point||'-')}</td>`+
+            `<td>${escapeHtml(b.journey_date||'-')}</td>`+
+            `<td>${escapeHtml(b.journey_time||'-')}</td>`+
+            `<td>${escapeHtml(b.pickup_time||'-')}</td>`+
+            `<td>${escapeHtml(b.amount||'-')}</td>`+
+            `<td>${escapeHtml(b.user_name||'-')}</td>`+
+            `<td>${escapeHtml(b.user_phone||'-')}</td>`+
+            `<td>${escapeHtml(created)}</td>`+
+            `<td>${paymentBadge(b)}</td>`;
+          airportBody.appendChild(tr);
+        } else if(svc === 'oneway'){
+          const tr = document.createElement('tr'); tr.dataset.id = b.id;
+          tr.innerHTML = `<td><input class="row-select" type="checkbox" value="${b.id}"></td>`+
+            `<td>${escapeHtml(b.id)}</td>`+
+            `<td>${escapeHtml(b.from_city||'-')}</td>`+
+            `<td>${escapeHtml(b.from_point||'-')}</td>`+
+            `<td>${escapeHtml(b.to_city||'-')}</td>`+
+            `<td>${escapeHtml(b.to_point||'-')}</td>`+
+            `<td>${escapeHtml(b.journey_date||'-')}</td>`+
+            `<td>${escapeHtml(b.journey_time||'-')}</td>`+
+            `<td>${escapeHtml(b.amount||'-')}</td>`+
+            `<td>${escapeHtml(b.user_name||'-')}</td>`+
+            `<td>${escapeHtml(b.user_phone||'-')}</td>`+
+            `<td>${escapeHtml(created)}</td>`+
+            `<td>${paymentBadge(b)}</td>`;
+          onewayBody.appendChild(tr);
+        }
+      });
+      // Uncheck select-all boxes
+      document.getElementById('selectAllDaily').checked = false;
+      document.getElementById('selectAllAirport').checked = false;
+      document.getElementById('selectAllOneway').checked = false;
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const now = new Date();
+      renderCalendar(now.getFullYear(), now.getMonth());
+      // Auto-select a relevant date so bookings (and Payment column) are visible:
+      try{
+        if (Array.isArray(BOOKINGS) && BOOKINGS.length){
+          const pad = n => String(n).padStart(2,'0');
+          const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+          let target = null;
+          if (BOOKINGS.some(b => b.journey_date === today)) {
+            target = today;
+          } else {
+            const dates = BOOKINGS.map(b => b.journey_date).filter(Boolean);
+            if (dates.length){ dates.sort(); target = dates[dates.length-1]; }
+          }
+          if (target){
+            // If target is in a different month, render that month first
+            const parts = target.split('-').map(Number);
+            const ty = parts[0], tm = parts[1]-1;
+            if (ty !== calYear || tm !== calMonth) renderCalendar(ty, tm);
+            const el = document.querySelector('.date-cell[data-date="'+target+'"]');
+            if (el) selectDate(target, el);
+          }
+        }
+      }catch(e){/* non-fatal */}
+      document.getElementById('prevMonth').addEventListener('click', ()=>{
+        const d = new Date(calYear, calMonth-1, 1); renderCalendar(d.getFullYear(), d.getMonth());
+      });
+      document.getElementById('nextMonth').addEventListener('click', ()=>{
+        const d = new Date(calYear, calMonth+1, 1); renderCalendar(d.getFullYear(), d.getMonth());
+      });
+      document.getElementById('todayBtn').addEventListener('click', ()=>{
+        const t = new Date(); selectDate(`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`);
+      });
+      document.getElementById('clearDateBtn').addEventListener('click', ()=>{
+        document.getElementById('bigHeaderLine1').textContent = 'Select a date';
+        document.getElementById('bigHeaderLine2').textContent = 'Click any day to show bookings';
+        document.getElementById('bookingsContainer').style.display='none';
+        document.querySelectorAll('.date-cell.selected').forEach(n => n.classList.remove('selected'));
+      });
+    });
+  </script>
 
   <script>
     // select-all handlers per section

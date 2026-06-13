@@ -251,25 +251,91 @@ def list_bookings():
     return jsonify(rows)
 
 
-@app.route("/admin")
+@app.route("/admin", methods=["GET", "POST"])
 def admin():
+    """Render login page (GET) or handle login form (POST).
+
+    On POST, validate credentials (supports ADMIN_CREDENTIALS env or
+    fallback to ADMIN_USERNAME/ADMIN_PASSWORD and built-in Khadija account)
+    and render the dashboard on success.
     """
-    Read all bookings from Neon (Postgres) and render admin page.
-    """
+    if request.method == 'GET':
+        return render_template('admin.html')
+
+    # POST: authenticate
+    username = request.form.get('username') or ''
+    password = request.form.get('password') or ''
+
+    creds = []
+    raw = os.environ.get('ADMIN_CREDENTIALS')
+    if raw:
+        for part in raw.split(','):
+            part = part.strip()
+            if not part:
+                continue
+            if ':' in part:
+                u, p = part.split(':', 1)
+                creds.append((u, p))
+    else:
+        creds.append((os.environ.get('ADMIN_USERNAME', 'admin'), os.environ.get('ADMIN_PASSWORD', '1234')))
+        creds.append(('Khadija@kabir', '010907'))
+
+    authenticated = any((username == u and password == p) for (u, p) in creds)
+    if not authenticated:
+        return render_template('admin.html', error='Invalid username or password'), 401
+
+    # Authenticated: fetch bookings and render admindash
     conn = get_db_conn()
     cur = conn.cursor()
-    # select columns you created in the bookings table
     cur.execute("""
         SELECT id, service_type, from_city, from_point, to_city, to_point,
-        
                journey_date, journey_time, pickup_time, seats, amount,
-               user_name, user_phone, user_email, created_at
+               user_name, user_phone, user_email, external_id, payment_status, payment_id, created_at
         FROM bookings
         ORDER BY created_at DESC
     """)
-    bookings = cur.fetchall()  # RealDictCursor => list of dict-like rows
+    bookings = cur.fetchall()
     cur.close()
-    return render_template("admin.html", bookings=bookings)
+
+    # Make a JSON-serializable copy of bookings for client-side filtering.
+    try:
+        from decimal import Decimal
+        from datetime import date as _date, datetime as _dt
+        bookings_json = []
+        for row in bookings:
+            entry = {}
+            for k, v in row.items():
+                if v is None:
+                    entry[k] = None
+                elif isinstance(v, Decimal):
+                    try:
+                        entry[k] = float(v)
+                    except Exception:
+                        entry[k] = str(v)
+                elif isinstance(v, (_dt, _date)):
+                    if k == 'journey_date':
+                        try:
+                            entry[k] = v.isoformat()
+                        except Exception:
+                            entry[k] = str(v)
+                    else:
+                        try:
+                            entry[k] = v.isoformat()
+                        except Exception:
+                            entry[k] = str(v)
+                else:
+                    entry[k] = v
+            bookings_json.append(entry)
+    except Exception:
+        bookings_json = bookings
+
+    return render_template('admindash.html', bookings=bookings, bookings_json=bookings_json)
+
+
+@app.route("/admin/admindash", methods=["GET"])
+def admin_legacy_redirect():
+    """Legacy URL support: redirect to /admin (login/dashboard)."""
+    return redirect(url_for('admin'))
 
 
 # Razorpay keys (read from environment; do NOT hard-code secrets)
