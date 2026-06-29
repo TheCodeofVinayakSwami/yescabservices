@@ -70,6 +70,101 @@ def get_db_conn():
     return conn
 
 
+def upsert_booking_record(booking, external_id=None, payment_status=None, payment_id=None, webhook_payload=None, created_at=None):
+    """Create or update a booking row using external_id as the stable lookup key."""
+    if not booking:
+        return None
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    payload = booking or {}
+    service = payload.get("service_type") or payload.get("service")
+    from_city = canonicalize_city(payload.get("from"))
+    to_city = canonicalize_city(payload.get("to"))
+    from_point = payload.get("from_point")
+    to_point = payload.get("to_point")
+    journey_date = payload.get("date") or None
+    journey_time = payload.get("time")
+    pickup_time = payload.get("pickup_time") or None
+    seats = int(payload.get("seats") or 0)
+    amount = float(payload.get("amount") or 0)
+    user_name = payload.get("user_name")
+    user_phone = payload.get("user_phone")
+    user_email = payload.get("user_email")
+
+    cur.execute(
+        "SELECT id FROM bookings WHERE external_id=%s",
+        (external_id,),
+    )
+    existing = cur.fetchone()
+
+    if existing:
+        cur.execute(
+            """
+            UPDATE bookings SET
+              service_type=%s, from_city=%s, from_point=%s, to_city=%s, to_point=%s,
+              journey_date=%s, journey_time=%s, pickup_time=%s, seats=%s, amount=%s,
+              user_name=%s, user_phone=%s, user_email=%s, payment_status=%s,
+              payment_id=%s, webhook_payload=%s
+            WHERE id=%s
+            RETURNING id, user_name, user_phone, user_email, from_city, to_city, journey_date, seats, amount, payment_status, payment_id
+            """,
+            (
+                service,
+                from_city,
+                from_point,
+                to_city,
+                to_point,
+                journey_date,
+                journey_time,
+                pickup_time,
+                seats,
+                amount,
+                user_name,
+                user_phone,
+                user_email,
+                payment_status,
+                payment_id,
+                json.dumps(webhook_payload) if webhook_payload is not None else None,
+                existing["id"],
+            ),
+        )
+    else:
+        cur.execute(
+            """
+            INSERT INTO bookings
+              (service_type, from_city, from_point, to_city, to_point, journey_date, journey_time, pickup_time, seats, amount, user_name, user_phone, user_email, external_id, payment_status, payment_id, webhook_payload, created_at)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id, user_name, user_phone, user_email, from_city, to_city, journey_date, seats, amount, payment_status, payment_id
+            """,
+            (
+                service,
+                from_city,
+                from_point,
+                to_city,
+                to_point,
+                journey_date,
+                journey_time,
+                pickup_time,
+                seats,
+                amount,
+                user_name,
+                user_phone,
+                user_email,
+                external_id,
+                payment_status,
+                payment_id,
+                json.dumps(webhook_payload) if webhook_payload is not None else None,
+                created_at or datetime.utcnow(),
+            ),
+        )
+
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    return row
+
+
 def init_db():
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     cur = conn.cursor()
@@ -528,6 +623,15 @@ def create_order():
     }
     try:
         order = rzp_client.order.create(data=order_data)
+        order_id = order.get("id") if isinstance(order, dict) else None
+        if order_id:
+            upsert_booking_record(
+                body,
+                external_id=order_id,
+                payment_status="pending",
+                payment_id=None,
+                webhook_payload={"order_created": True, "order": order},
+            )
         # Return order + pass-through booking summary (you may also store temporary record)
         return jsonify({"order": order, "booking": body}), 200
     except Exception as e:
@@ -572,41 +676,15 @@ def verify_payment_and_save():
     if not hmac.compare_digest(generated_signature, signature):
         return jsonify({"error":"signature mismatch"}), 400
 
-    # Payment verified -> save booking into DB (record payment id/status)
+    # Payment verified -> save/update booking into DB (record payment id/status)
     try:
-        conn = get_db_conn()
-        cur = conn.cursor()
-        cur.execute(
-            """
-            INSERT INTO bookings
-              (service_type, from_city, from_point, to_city, to_point, journey_date, journey_time, pickup_time, seats, amount, user_name, user_phone, user_email, external_id, payment_status, payment_id, webhook_payload, created_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            RETURNING id, user_name, user_phone, user_email, from_city, to_city, journey_date, seats, amount
-            """,
-            (
-                (booking.get("service_type") or booking.get("service")),
-                canonicalize_city(booking.get("from")),
-                booking.get("from_point"),
-                canonicalize_city(booking.get("to")),
-                booking.get("to_point"),
-                booking.get("date") or None,
-                booking.get("time"),
-                booking.get("pickup_time") or None,
-                int(booking.get("seats") or 0),
-                float(booking.get("amount") or 0),
-                booking.get("user_name"),
-                booking.get("user_phone"),
-                booking.get("user_email"),
-                order_id,
-                'paid',
-                payment_id,
-                json.dumps(data),
-                datetime.utcnow(),
-            ),
+        row = upsert_booking_record(
+            booking,
+            external_id=order_id,
+            payment_status='paid',
+            payment_id=payment_id,
+            webhook_payload=data,
         )
-        row = cur.fetchone()
-        conn.commit()
-        cur.close()
 
         # Notify admin via Telegram (do not send to user)
         try:
@@ -692,15 +770,30 @@ def razorpay_webhook():
         amount = (payment_entity.get("amount") or 0) / 100.0
         updated = None
         try:
-            conn = get_db_conn()
-            cur = conn.cursor()
-            cur.execute(
-                "UPDATE bookings SET payment_status=%s, payment_id=%s, webhook_payload=%s WHERE external_id=%s RETURNING id, user_name, user_phone, user_email, from_city, to_city, journey_date, seats, amount",
-                (status, payment_id, json.dumps(payload), order_id),
-            )
-            updated = cur.fetchone()
-            conn.commit()
-            cur.close()
+            if order_id:
+                updated = upsert_booking_record(
+                    {
+                        "service_type": None,
+                        "from": None,
+                        "to": None,
+                        "from_point": None,
+                        "to_point": None,
+                        "date": None,
+                        "time": None,
+                        "pickup_time": None,
+                        "seats": None,
+                        "amount": None,
+                        "user_name": None,
+                        "user_phone": None,
+                        "user_email": None,
+                    },
+                    external_id=order_id,
+                    payment_status=status,
+                    payment_id=payment_id,
+                    webhook_payload=payload,
+                )
+            else:
+                updated = None
         except Exception:
             logging.exception("Failed to update booking from webhook")
             updated = None

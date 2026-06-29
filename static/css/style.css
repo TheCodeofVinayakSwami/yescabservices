@@ -217,3 +217,89 @@
 .required{color:#d33;font-weight:700;margin-left:4px}
 .contact-form input:focus,.contact-form textarea:focus{outline:none;border-color:#d6c1a0;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
 @media(max-width:900px){.contact-container{grid-template-columns:1fr}.opening-value{font-size:40px}.contact-right{order:2}.contact-left{order:1;padding:28px}.contact-section{padding:28px 0}}
+/* Mobile (medium phones ~376-414px) - added for responsive layout */
+@media (max-width: 414px) {
+  /* Header */
+  .header-inner { padding: 10px; gap:8px; }
+  .site-logo { width: 110px; height: auto; }
+  .site-title { font-size: 16px; line-height:1.1; }
+
+  /* Nav menu: horizontal scroll for many links */
+  .menu-bar { padding: 8px 10px; }
+  .menu-list { display:flex; gap:8px; overflow:auto; font-size:14px; }
+  .menu-list li{min-width:unset;flex:0 0 auto}
+
+  /* Carousel banner responsive */
+  .carousel-wrapper img,
+  .carousel-inner img { width:100%; height:auto; object-fit:cover; }
+
+  /* Booking card: full width and stacked fields */
+  .booking-card { position: static; transform:none; width:96%; margin:12px auto; padding:12px; }
+  .tabs { display:flex; gap:8px; overflow:auto; }
+  .service-tab { padding:8px 10px; font-size:14px; flex:0 0 auto }
+
+  .forms-row { display:flex; flex-direction:column; gap:10px; }
+  .forms-row .col { width:100%; max-width:100%; }
+  .forms-row .col.col-3 { width:100%; }
+  .forms-row label { font-size:13px; }
+  .form-select, .form-control, input[type="date"] { width:100%; padding:10px; font-size:14px; }
+
+  /* Buttons stacked and full width */
+  .goto-booking, .howto-btn { width:100%; padding:12px; font-size:15px; }
+  .howto-btn { margin-bottom:6px; }
+
+  /* Testimonials: single column */
+  #testimonials { display:flex; flex-direction:column; gap:14px; align-items:center; }
+  .testimonial-card { min-width:unset; width:92%; max-width:420px; }
+
+  /* SEO / tourism images */
+  .seo-image img, .tourism-img img { width:100%; height:auto; object-fit:cover; }
+
+  /* Footer: stack columns */
+  .footer .frow { display:flex; flex-direction:column; gap:14px; }
+  .footer-item h4 { font-size:16px; }
+  .footer-item a { display:block; font-size:14px; margin:6px 0; }
+
+  /* Floating buttons (phone / whatsapp) scale down */
+  #leftContact a, #whatsappFloat a, .chat-float { width:48px; height:48px; }
+  #leftContact img, #whatsappFloat img, .chat-float svg { width:22px; height:22px; }
+
+  /* Modal / how-to */
+  #howtoModal { max-width:92%; padding:14px; }
+  #howtoContent { max-height:52vh; overflow:auto; }
+
+  /* Minor utility */
+  .container, .container-fluid { padding-left:12px; padding-right:12px; }
+}
+
+/* Extra tight spacing/typography for very small phones (≤375px) */
+@media (max-width: 375px) {
+  .site-logo { width: 96px; }
+  .site-title { font-size: 14px; }
+
+  /* Slightly shorter banner height on very small devices */
+  .carousel-inner img { height: 320px; border-radius:6px; }
+
+  /* Booking card tighter */
+  .booking-card { padding:10px; border-radius:12px; }
+  .tabs { gap:6px; }
+  .service-tab { padding:7px 9px; font-size:13px; }
+
+  .forms-row label { font-size:12px; }
+  .form-select, .form-control, input[type="date"] { padding:8px; font-size:13px; }
+
+  .goto-booking, .howto-btn { font-size:14px; padding:10px; }
+
+  /* Testimonials and cards */
+  .testimonial-card { width:96%; padding:18px; }
+
+  .seo-section h1 { font-size:18px; }
+  .tourism-img img { height:120px; }
+
+  /* Footer spacing */
+  .footer .frow { gap:12px; }
+
+  /* Floating actions slightly smaller */
+  .chat-float, #leftContact a, #whatsappFloat a { width:46px; height:46px; }
+  .chat-float svg, #leftContact img, #whatsappFloat img { width:20px; height:20px; }
+}

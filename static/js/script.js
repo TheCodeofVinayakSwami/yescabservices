@@ -187,10 +187,10 @@ document.addEventListener('DOMContentLoaded', function() {
     "Kolhapur-Nashik": { "Ertiga": 9000, "Kia Carens": 10500, "Swift": 8000 },
     "Kolhapur-Ahmednagar": { "Ertiga": 6000, "Kia Carens": 7500, "Swift": 5000 },
     "Kolhapur-Chhatrapati Sambhaji Nagar (Aurangabad)": { "Ertiga": 9000, "Kia Carens": 11000, "Swift": 8000 },
-    "Kolhapur-Shirdi": { "Ertiga": 3500, "Kia Carens": 5000, "Swift": 3000 },
+    "Kolhapur-Shirdi": { "Ertiga": 8000, "Kia Carens": 9500, "Swift": 6500 },
     "Kolhapur-Sangli": { "Ertiga": 2000, "Kia Carens": 3000, "Swift": 1800 },
-    "Kolhapur-Solapur": { "Ertiga": 3000, "Kia Carens": 4000, "Swift": 2500 },
-    "Kolhapur-Satara": { "Ertiga": 2500, "Kia Carens": 3500, "Swift": 2000 }
+    "Kolhapur-Solapur": { "Ertiga": 5000, "Kia Carens": 5500, "Swift": 4000 },
+    "Kolhapur-Satara": { "Ertiga": 3000, "Kia Carens": 3500, "Swift": 2500 }
 
   };
   
@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', function() {
   onewayPricing["Pune-Nashik"] = { "Ertiga": 4500, "Swift": 3500 };
   onewayPricing["Pune-Ahmednagar"] = { "Ertiga": 4000, "Swift": 3000 };
   onewayPricing["Pune-Chhatrapati Sambhaji Nagar (Aurangabad)"] = { "Ertiga": 5000, "Swift": 4000 };
-  onewayPricing["Pune-Shirdi"] = { "Ertiga": 3500, "Swift": 3500 };
+  onewayPricing["Pune-Shirdi"] = { "Ertiga": 5000, "Swift": 3500 };
   onewayPricing["Pune-Sangli"] = { "Ertiga": 4500, "Swift": 3500 };
   onewayPricing["Pune-Solapur"] = { "Ertiga": 5000, "Swift": 4000 };
   onewayPricing["Pune-Satara"] = { "Ertiga": 3500, "Swift": 2500 };
