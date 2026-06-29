@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // ===== DAILY CAB - SEATS TO AMOUNT =====
   document.getElementById('seats')?.addEventListener('change', function() {
     const seats = parseInt(this.value, 10);
-    const amount = seats ? 600 * seats : '';
+    const amount = seats ? 2 * seats : '';
     document.getElementById('amount').value = amount ? amount + ' ₹' : '';
   });
 
